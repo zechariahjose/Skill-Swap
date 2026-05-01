@@ -1,2 +1,3 @@
 Skill Swap is a mobile application that enables users to exchange skills without using money. Built with Flutter or React Native and powered by Firebase, the platform allows users to create profiles, list their skills, browse others’ offerings, and send swap requests. 
 It promotes collaboration, learning, and accessibility by connecting people who can trade services like tutoring, design, or coding—creating a community-driven, cash-free marketplace.
+
