@@ -13,11 +13,11 @@ interface SwapRequestCardProps {
   onComplete?: (id: string) => void;
 }
 
-const STATUS_CONFIG: Record<SwapStatus, { label: string; color: string; bg: string }> = {
-  pending:   { label: '⏳ Pending',   color: '#B8860B', bg: '#FFF8DC' },
-  accepted:  { label: '✅ Accepted',  color: '#2E7D32', bg: '#E8F5E9' },
-  rejected:  { label: '❌ Rejected',  color: '#C62828', bg: '#FFEBEE' },
-  completed: { label: '🎉 Completed', color: '#1565C0', bg: '#E3F2FD' },
+const STATUS_CONFIG: Record<SwapStatus, { label: string; color: string; dot: string }> = {
+  pending:   { label: 'Pending',   color: Colors.statusPending, dot: Colors.statusPending },
+  accepted:  { label: 'Accepted',  color: Colors.statusGreen,   dot: Colors.statusGreen },
+  rejected:  { label: 'Declined',  color: Colors.statusRed,     dot: Colors.statusRed },
+  completed: { label: 'Completed', color: Colors.muted,          dot: Colors.muted },
 };
 
 export default function SwapRequestCard({
@@ -30,62 +30,47 @@ export default function SwapRequestCard({
 
   return (
     <View style={styles.card}>
-      {/* User row */}
-      <View style={styles.row}>
+      {/* Row 1: avatar + name + status */}
+      <View style={styles.headerRow}>
         <Avatar initials={otherInitials} size={40} />
-        <View style={{ marginLeft: 10, flex: 1 }}>
+        <View style={styles.nameGroup} pointerEvents="none">
           <Text style={styles.name}>{otherName}</Text>
-          <Text style={styles.direction}>
-            {isIncoming ? 'wants to swap with you' : 'you sent a request'}
-          </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-          <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+        <View style={styles.statusGroup}>
+          <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
+          <Text style={styles.statusLabel}>{status.label}</Text>
         </View>
       </View>
 
-      {/* Swap details */}
-      <View style={styles.swapDetails}>
-        <View style={styles.skillBox}>
-          <Text style={styles.skillLabel}>They offer</Text>
-          <Text style={styles.skillTitle}>{request.offeredSkillTitle}</Text>
+      {/* Row 2: section label */}
+      <Text style={styles.sectionLabel}>SKILL EXCHANGE</Text>
+
+      {/* Row 3: pills */}
+      <View style={styles.exchangeRow}>
+        <View style={styles.skillPill}>
+          <Text style={styles.skillText} numberOfLines={1}>{request.offeredSkillTitle}</Text>
         </View>
-        <View style={styles.arrowBox}>
-          <Text style={styles.arrow}>⇄</Text>
-        </View>
-        <View style={styles.skillBox}>
-          <Text style={styles.skillLabel}>For your</Text>
-          <Text style={styles.skillTitle}>{request.requestedSkillTitle}</Text>
+        <Text style={styles.exchangeSymbol}>↔</Text>
+        <View style={styles.skillPill}>
+          <Text style={styles.skillText} numberOfLines={1}>{request.requestedSkillTitle}</Text>
         </View>
       </View>
 
-      {/* Actions */}
+      {/* Row 4: actions */}
       {isIncoming && request.status === 'pending' && (
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.rejectBtn}
-            onPress={() => onReject?.(request.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.rejectText}>Decline</Text>
+          <TouchableOpacity onPress={() => onReject?.(request.id)} activeOpacity={0.6}>
+            <Text style={styles.declineLink}>Decline</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.acceptBtn}
-            onPress={() => onAccept?.(request.id)}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.acceptText}>Accept Swap</Text>
+          <TouchableOpacity onPress={() => onAccept?.(request.id)} activeOpacity={0.85} style={styles.acceptBtn}>
+            <Text style={styles.acceptBtnText}>Accept →</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {request.status === 'accepted' && (
-        <TouchableOpacity
-          style={styles.completeBtn}
-          onPress={() => onComplete?.(request.id)}
-          activeOpacity={0.75}
-        >
-          <Text style={styles.completeBtnText}>🎉 Mark as Completed</Text>
+        <TouchableOpacity onPress={() => onComplete?.(request.id)} activeOpacity={0.85} style={styles.completeBtn}>
+          <Text style={styles.completeBtnText}>Mark as completed →</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -94,108 +79,107 @@ export default function SwapRequestCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.sand,
-    borderRadius: Theme.borderRadius.lg,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 14,
-    ...Theme.shadow.card,
+    marginBottom: 12,
   },
-  row: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 12,
+  },
+  nameGroup: {
+    flex: 1,
   },
   name: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 15,
-    color: Colors.charcoal,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 17,
+    color: Colors.ink,
   },
-  direction: {
+  statusGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusLabel: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 12,
     color: Colors.muted,
-    marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Theme.borderRadius.full,
+  sectionLabel: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
-  statusText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 11,
-  },
-  swapDetails: {
+  exchangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cream,
-    borderRadius: Theme.borderRadius.md,
-    padding: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 14,
   },
-  skillBox: {
+  skillPill: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: Colors.softSurface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: Theme.borderRadius.full,
   },
-  skillLabel: {
+  skillText: {
     fontFamily: 'Nunito_400Regular',
-    fontSize: 11,
+    fontSize: Theme.fontSize.small,
+    color: Colors.body,
+  },
+  exchangeSymbol: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 14,
     color: Colors.muted,
-    marginBottom: 4,
-  },
-  skillTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 13,
-    color: Colors.charcoal,
-    textAlign: 'center',
-  },
-  arrowBox: {
-    width: 32,
-    alignItems: 'center',
-  },
-  arrow: {
-    fontSize: 22,
-    color: Colors.terracotta,
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  rejectBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: Theme.borderRadius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.sandDark,
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    gap: 14,
   },
-  rejectText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14,
+  declineLink: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: Theme.fontSize.small,
     color: Colors.muted,
   },
   acceptBtn: {
-    flex: 2,
-    paddingVertical: 11,
+    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.sage,
-    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  acceptText: {
+  acceptBtnText: {
     fontFamily: 'Nunito_700Bold',
-    fontSize: 14,
+    fontSize: Theme.fontSize.small,
     color: Colors.white,
   },
   completeBtn: {
-    paddingVertical: 11,
+    alignSelf: 'flex-end',
+    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.terracotta,
-    alignItems: 'center',
-    ...Theme.shadow.btn,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   completeBtnText: {
     fontFamily: 'Nunito_700Bold',
-    fontSize: 14,
+    fontSize: Theme.fontSize.small,
     color: Colors.white,
   },
 });

@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#FAF6F0"
+      "backgroundColor": "#F2F0EC"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FAF6F0"
+        "backgroundColor": "#F2F0EC"
       },
       "package": "com.skillswap.app"
     },

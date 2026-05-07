@@ -1,114 +1,134 @@
 import { StyleSheet } from 'react-native';
 import { Colors } from './Colors';
- 
+
 export const Theme = {
   borderRadius: {
-    sm: 8,
-    md: 14,
-    lg: 20,
-    xl: 28,
-    full: 999,
+    sm:   6,
+    md:   10,
+    lg:   12,    // cards (V3)
+    xl:   20,    // auth card panel
+    xxl:  20,
+    full: 999,   // pill buttons only
+    wave: 14,
   },
   spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
+    xs:  4,
+    sm:  8,
+    md:  16,
+    lg:  24,
+    xl:  32,
     xxl: 48,
   },
+  // V3 type scale — keep dramatic contrast
+  fontSize: {
+    label: 11,
+    small: 13,
+    body: 15,
+    h2: 20,
+    h1: 26,
+    title: 28,
+    display: 34,
+  },
   shadow: {
+    // Kept minimal — for FAB only
     card: {
-      shadowColor: '#2D2D2D',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 4,
+      shadowColor: 'transparent',
+      elevation: 0,
     },
     btn: {
-      shadowColor: '#C4623A',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
+      shadowColor: Colors.ink,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.10,
+      shadowRadius: 10,
       elevation: 6,
+    },
+    float: {
+      shadowColor: Colors.ink,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.10,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    glow: {
+      shadowColor: Colors.accent,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.18,
+      shadowRadius: 6,
+      elevation: 3,
     },
   },
 };
- 
+
 export const globalStyles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.cream,
+    backgroundColor: Colors.paper,
   },
-  card: {
-    backgroundColor: Colors.sand,
-    borderRadius: Theme.borderRadius.lg,
-    padding: Theme.spacing.md,
-    ...Theme.shadow.card,
+  surface: {
+    backgroundColor: Colors.surface,
   },
+  // Section label — small caps, tracked, muted
+  sectionLabel: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: Theme.fontSize.label,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  // Pill CTA button
   btnPrimary: {
-    backgroundColor: Colors.terracotta,
+    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    paddingVertical: 15,
     alignItems: 'center',
-    ...Theme.shadow.btn,
   },
   btnPrimaryText: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: Theme.fontSize.body,
     fontFamily: 'Nunito_700Bold',
     letterSpacing: 0.3,
   },
-  btnSecondary: {
-    backgroundColor: 'transparent',
-    borderRadius: Theme.borderRadius.full,
-    paddingVertical: 13,
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.terracotta,
-  },
-  btnSecondaryText: {
-    color: Colors.terracotta,
-    fontSize: 15,
-    fontFamily: 'Nunito_700Bold',
+  // Display heading
+  displayHeading: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    color: Colors.ink,
+    fontSize: Theme.fontSize.display,
+    lineHeight: 39,
+    letterSpacing: -0.5,
   },
   heading: {
     fontFamily: 'DMSerifDisplay_400Regular',
-    color: Colors.charcoal,
-    fontSize: 28,
-    lineHeight: 34,
+    color: Colors.ink,
+    fontSize: Theme.fontSize.h1,
+    lineHeight: 32,
+    letterSpacing: -0.5,
   },
   subheading: {
-    fontFamily: 'Nunito_700Bold',
-    color: Colors.charcoal,
-    fontSize: 16,
+    fontFamily: 'Nunito_600SemiBold',
+    color: Colors.body,
+    fontSize: Theme.fontSize.body,
   },
   body: {
     fontFamily: 'Nunito_400Regular',
-    color: Colors.charcoal,
-    fontSize: 14,
-    lineHeight: 20,
+    color: Colors.body,
+    fontSize: Theme.fontSize.body,
+    lineHeight: 24,
   },
   muted: {
     fontFamily: 'Nunito_400Regular',
     color: Colors.muted,
-    fontSize: 13,
+    fontSize: Theme.fontSize.small,
   },
+  // Bottom-border-only input
   input: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.borderRadius.md,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: 14,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingVertical: 12,
     fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-    color: Colors.charcoal,
-    borderWidth: 1.5,
-    borderColor: Colors.sandDark,
-  },
-  inputFocused: {
-    borderColor: Colors.terracotta,
+    fontSize: Theme.fontSize.body,
+    color: Colors.body,
   },
   row: {
     flexDirection: 'row',
@@ -117,5 +137,11 @@ export const globalStyles = StyleSheet.create({
   center: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Accent text link
+  textLink: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: Theme.fontSize.small,
+    color: Colors.accent,
   },
 });

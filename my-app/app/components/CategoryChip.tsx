@@ -12,19 +12,15 @@ interface CategoryChipProps {
 
 export default function CategoryChip({ label, selected, onPress }: CategoryChipProps) {
   const cat = CATEGORIES.find((c) => c.label === label);
-  const emoji = cat?.emoji ?? '🌟';
-  const accentColor = cat?.color ?? Colors.terracotta;
+  const emoji = cat?.emoji ?? '✦';
 
   return (
     <TouchableOpacity
-      style={[
-        styles.chip,
-        selected && { backgroundColor: accentColor, borderColor: accentColor },
-      ]}
+      style={[styles.chip, selected && styles.chipSelected]}
       onPress={onPress}
-      activeOpacity={0.75}
+      activeOpacity={0.7}
     >
-      <Text style={styles.emoji}>{label === 'All' ? '✨' : emoji}</Text>
+      <Text style={styles.emoji}>{label === 'All' ? '✦' : emoji}</Text>
       <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -35,23 +31,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    height: 34,
     paddingHorizontal: 14,
-    paddingVertical: 8,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.sand,
-    borderWidth: 1.5,
-    borderColor: Colors.sandDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     marginRight: 8,
   },
+  chipSelected: {
+    backgroundColor: Colors.softSurface,
+    borderColor: Colors.border,
+  },
   emoji: {
-    fontSize: 14,
+    fontSize: 13,
   },
   label: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 13,
-    color: Colors.charcoal,
+    fontFamily: 'Nunito_400Regular',
+    fontSize: Theme.fontSize.small,
+    color: Colors.body,
+    letterSpacing: 0.2,
   },
   labelSelected: {
-    color: Colors.white,
+    color: Colors.ink,
+    fontFamily: 'Nunito_700Bold',
   },
 });

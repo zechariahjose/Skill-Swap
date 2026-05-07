@@ -4,11 +4,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  StatusBar,
 } from 'react-native';
 import { register } from '../firebase/auth';
 import { Colors } from '../constants/Colors';
@@ -25,7 +27,6 @@ export default function RegisterScreen() {
       Alert.alert('Check details', 'Use a valid name, email, and password (6+ chars).');
       return;
     }
-
     try {
       setSubmitting(true);
       await register(email.trim(), password, name.trim());
@@ -43,45 +44,68 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Create your profile</Text>
-        <Text style={styles.subtitle}>Start exchanging skills with your community</Text>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView
+        contentContainerStyle={styles.inner}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Brand */}
+        <View style={styles.brandBlock}>
+          <Text style={styles.brandName}>Skill Swap</Text>
+          <Text style={styles.brandTagline}>Share skills, not money.</Text>
+        </View>
 
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Full name"
-          placeholderTextColor={Colors.muted}
-          style={styles.input}
-        />
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="Email"
-          placeholderTextColor={Colors.muted}
-          style={styles.input}
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="Password"
-          placeholderTextColor={Colors.muted}
-          style={styles.input}
-        />
+        {/* Form */}
+        <View style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Your name"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+            />
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Email"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+            />
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="Password (6+ chars)"
+              placeholderTextColor={Colors.muted}
+              style={styles.input}
+            />
+          </View>
 
-        <TouchableOpacity style={styles.button} onPress={onRegister} disabled={submitting}>
-          <Text style={styles.buttonText}>{submitting ? 'Creating account...' : 'Create account'}</Text>
-        </TouchableOpacity>
-
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity style={styles.linkButton}>
-            <Text style={styles.linkText}>Already have an account? Sign in</Text>
+          <TouchableOpacity
+            style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
+            onPress={onRegister}
+            disabled={submitting}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryBtnText}>
+              {submitting ? 'Creating account…' : 'Join the community'}
+            </Text>
           </TouchableOpacity>
-        </Link>
-      </View>
+
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity style={styles.linkBtn} activeOpacity={0.8}>
+              <Text style={styles.linkText}>
+                Already a member?{' '}
+                <Text style={styles.linkAccent}>Sign in</Text>
+              </Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -89,54 +113,78 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.cream,
-    justifyContent: 'center',
-    padding: Theme.spacing.lg,
+    backgroundColor: Colors.background,
   },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.borderRadius.lg,
-    padding: Theme.spacing.lg,
-    gap: Theme.spacing.sm,
-    ...Theme.shadow.card,
+  inner: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 72,
+    paddingBottom: 64,
   },
-  title: {
+  brandBlock: {
+    gap: 8,
+    marginBottom: 40,
+  },
+  brandName: {
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 30,
-    color: Colors.charcoal,
+    fontSize: 40,
+    color: Colors.ink,
+    letterSpacing: -0.5,
+    lineHeight: 46,
   },
-  subtitle: {
+  brandTagline: {
     fontFamily: 'Nunito_400Regular',
+    fontSize: 16,
     color: Colors.muted,
-    marginBottom: Theme.spacing.md,
+    fontStyle: 'italic',
+  },
+  formCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 0,
   },
   input: {
-    backgroundColor: Colors.cream,
-    borderRadius: Theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.sandDark,
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: 12,
     fontFamily: 'Nunito_400Regular',
-    color: Colors.charcoal,
+    fontSize: Theme.fontSize.body,
+    color: Colors.body,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: 'transparent',
   },
-  button: {
-    marginTop: Theme.spacing.sm,
+  primaryBtn: {
+    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.terracotta,
+    paddingVertical: 16,
     alignItems: 'center',
-    paddingVertical: 12,
   },
-  buttonText: {
-    color: Colors.white,
+  primaryBtnDisabled: {
+    opacity: 0.6,
+  },
+  primaryBtnText: {
     fontFamily: 'Nunito_700Bold',
+    fontSize: Theme.fontSize.body,
+    color: Colors.white,
+    letterSpacing: 0.3,
   },
-  linkButton: {
+  linkBtn: {
     alignItems: 'center',
-    paddingVertical: Theme.spacing.sm,
+    paddingVertical: 4,
   },
   linkText: {
-    fontFamily: 'Nunito_600SemiBold',
-    color: Colors.terracotta,
+    fontFamily: 'Nunito_400Regular',
+    fontSize: Theme.fontSize.small,
+    color: Colors.muted,
+  },
+  linkAccent: {
+    fontFamily: 'Nunito_700Bold',
+    color: Colors.accent,
   },
 });

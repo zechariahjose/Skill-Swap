@@ -6,11 +6,14 @@ interface AvatarProps {
   initials: string;
   size?: number;
   color?: string;
+  // ring prop kept for API compat but not rendered in editorial v2
+  ring?: boolean;
+  ringColor?: string;
 }
 
 const AVATAR_COLORS = [
-  '#C4623A', '#7A9E7E', '#9B7BB8', '#4A90A4',
-  '#C4923A', '#5A7A8F', '#8F6B5A', '#B8845A',
+  '#8B7355', '#6B8F71', '#7A7A9B', '#5A8A9B',
+  '#9B8B6B', '#6B7A8B', '#7A6B5A', '#8B7A6B',
 ];
 
 function getColor(initials: string): string {
@@ -20,7 +23,7 @@ function getColor(initials: string): string {
 
 export default function Avatar({ initials, size = 42, color }: AvatarProps) {
   const bg = color ?? getColor(initials);
-  const fontSize = size * 0.38;
+  const fontSize = size * 0.36;
 
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
@@ -37,6 +40,6 @@ const styles = StyleSheet.create({
   text: {
     color: Colors.white,
     fontFamily: 'Nunito_700Bold',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });
