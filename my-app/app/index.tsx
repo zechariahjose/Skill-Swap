@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
-import { useAuthContext } from './context/AuthContext';
-import { Colors } from './constants/Colors';
+import { useAuthContext } from '../src/context/AuthContext';
+import { Colors } from '../src/constants/Colors';
 
 export default function IndexScreen() {
   const { firebaseUser, loading } = useAuthContext();

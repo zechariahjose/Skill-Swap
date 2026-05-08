@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
 
 export default function SkeletonCard() {
   const anim = useRef(new Animated.Value(0.4)).current;

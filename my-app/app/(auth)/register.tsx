@@ -12,9 +12,9 @@ import {
   View,
   StatusBar,
 } from 'react-native';
-import { register } from '../firebase/auth';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
+import { register } from '../../src/firebase/auth';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');

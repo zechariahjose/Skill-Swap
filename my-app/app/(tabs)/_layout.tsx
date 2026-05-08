@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
 import { Redirect } from 'expo-router';
-import { useAuthContext } from '../context/AuthContext';
+import { useAuthContext } from '../../src/context/AuthContext';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 
 function PostSkillButton({ onPress }: { onPress: () => void }) {

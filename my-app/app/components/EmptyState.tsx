@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
 
 interface EmptyStateProps {
   emoji: string;

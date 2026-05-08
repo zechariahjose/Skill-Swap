@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { SwapRequest, SwapStatus } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { SwapRequest, SwapStatus } from '../../src/types';
 import Avatar from './Avatar';
 
 interface SwapRequestCardProps {

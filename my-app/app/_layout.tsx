@@ -7,8 +7,8 @@ import {
   Nunito_700Bold,
 } from '@expo-google-fonts/nunito';
 import { ActivityIndicator, View } from 'react-native';
-import { AuthProvider } from './context/AuthContext';
-import { Colors } from './constants/Colors';
+import { AuthProvider } from '../src/context/AuthContext';
+import { Colors } from '../src/constants/Colors';
 
 export default function RootLayout() {
   const [loaded] = useFonts({

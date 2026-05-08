@@ -51,7 +51,7 @@ export type Category =
   | 'Art'
   | 'Photography'
   | 'Other';
- 
+
 export const CATEGORIES: { label: Category; emoji: string; color: string }[] = [
   { label: 'Design',      emoji: '🎨', color: '#D4845A' },
   { label: 'Coding',      emoji: '💻', color: '#6B8F71' },
@@ -66,4 +66,3 @@ export const CATEGORIES: { label: Category; emoji: string; color: string }[] = [
   { label: 'Photography', emoji: '📷', color: '#6B7A8F' },
   { label: 'Other',       emoji: '⭐', color: '#9A8F83' },
 ];
- 

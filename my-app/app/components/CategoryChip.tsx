@@ -1,8 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { CATEGORIES, Category } from '../types';
-import { Theme } from '../constants/Theme';
+import { Colors } from '../../src/constants/Colors';
+import { CATEGORIES, Category } from '../../src/types';
+import { Theme } from '../../src/constants/Theme';
 
 interface CategoryChipProps {
   label: Category | 'All';

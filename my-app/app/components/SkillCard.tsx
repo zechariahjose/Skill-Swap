@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { Skill, CATEGORIES } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { Skill, CATEGORIES } from '../../src/types';
 
 interface SkillCardProps {
   skill: Skill;

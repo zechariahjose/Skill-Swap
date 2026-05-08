@@ -7,12 +7,12 @@ import {
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import SkillCard from '../components/SkillCard';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { useAuthContext } from '../context/AuthContext';
-import { signOut } from '../firebase/auth';
-import { deleteSkill, getSkillsByUser, updateUserProfile } from '../firebase/firestore';
-import { Skill } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { signOut } from '../../src/firebase/auth';
+import { deleteSkill, getSkillsByUser, updateUserProfile } from '../../src/firebase/firestore';
+import { Skill } from '../../src/types';
 
 export default function ProfileScreen() {
   const { userProfile, refreshProfile } = useAuthContext();

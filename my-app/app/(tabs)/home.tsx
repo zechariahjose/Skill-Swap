@@ -14,12 +14,12 @@ import EmptyState from '../components/EmptyState';
 import SkeletonCard from '../components/SkeletonCard';
 import SkillCard from '../components/SkillCard';
 import Avatar from '../components/Avatar';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { useAuthContext } from '../context/AuthContext';
-import { createSwapRequest, getSkillsByUser } from '../firebase/firestore';
-import { useSkills } from '../hooks/useSkills';
-import { CATEGORIES, Category, Skill } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { createSwapRequest, getSkillsByUser } from '../../src/firebase/firestore';
+import { useSkills } from '../../src/hooks/useSkills';
+import { CATEGORIES, Category, Skill } from '../../src/types';
 
 const COMMUNITY_MEMBERS = [
   { initials: 'AK', name: 'Aiko' },

@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { useAuthContext } from '../context/AuthContext';
-import { addSkill } from '../firebase/firestore';
-import { CATEGORIES, Category, Skill } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { addSkill } from '../../src/firebase/firestore';
+import { CATEGORIES, Category, Skill } from '../../src/types';
 
 type SkillType = Skill['type'];
 

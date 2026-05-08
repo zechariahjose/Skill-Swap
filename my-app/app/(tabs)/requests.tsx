@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import EmptyState from '../components/EmptyState';
 import SwapRequestCard from '../components/SwapRequestCard';
-import { Colors } from '../constants/Colors';
-import { Theme } from '../constants/Theme';
-import { useAuthContext } from '../context/AuthContext';
-import { subscribeToSwapRequests, updateSwapStatus } from '../firebase/firestore';
-import { SwapRequest } from '../types';
+import { Colors } from '../../src/constants/Colors';
+import { Theme } from '../../src/constants/Theme';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { subscribeToSwapRequests, updateSwapStatus } from '../../src/firebase/firestore';
+import { SwapRequest } from '../../src/types';
 
 type ViewMode = 'incoming' | 'outgoing';
 
