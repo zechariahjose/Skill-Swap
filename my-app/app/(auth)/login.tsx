@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 72,
+    justifyContent: 'center',
   },
   brandBlock: {
     gap: 8,

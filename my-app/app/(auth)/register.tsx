@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   inner: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 72,
     paddingBottom: 64,
+    justifyContent: 'center',
   },
   brandBlock: {
     gap: 8,

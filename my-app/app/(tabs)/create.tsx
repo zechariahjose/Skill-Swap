@@ -17,6 +17,11 @@ import { CATEGORIES, Category, Skill } from '../../src/types';
 
 type SkillType = Skill['type'];
 
+const ACCENT       = '#7F77DD';
+const ACCENT_LIGHT = '#AFA9EC';
+const ACCENT_SURF  = '#EEEDFE';
+const ACCENT_TEXT  = '#3C3489';
+
 export default function CreateSkillScreen() {
   const { userProfile } = useAuthContext();
   const [title, setTitle] = useState('');
@@ -46,9 +51,9 @@ export default function CreateSkillScreen() {
       setDescription('');
       setType('offer');
       Alert.alert('Posted', 'Your skill is now visible to the community.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save skill';
-      Alert.alert('Save failed', message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unable to save skill';
+      Alert.alert('Save failed', msg);
     } finally {
       setSubmitting(false);
     }
@@ -61,161 +66,185 @@ export default function CreateSkillScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Header */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Share a Skill</Text>
+      {/* ── Hero header ── */}
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>Community board</Text>
+        <Text style={styles.heroTitle}>Share a skill</Text>
+        <Text style={styles.heroSub}>Teach what you know. Learn what you need.</Text>
       </View>
 
-      <View style={styles.body}>
-        {/* Type selector */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>TYPE</Text>
-          <View style={styles.typeCol}>
-            <Pressable
-              onPress={() => setType('offer')}
-              style={[styles.typeTile, type === 'offer' && styles.typeTileSelected]}
-            >
-              <Text style={styles.tileTitle}>🙋 I'm offering</Text>
-              <Text style={styles.tileSub}>Teach what you know</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setType('need')}
-              style={[styles.typeTile, type === 'need' && styles.typeTileSelected]}
-            >
-              <Text style={styles.tileTitle}>🔍 I'm looking for</Text>
-              <Text style={styles.tileSub}>Learn what you need</Text>
-            </Pressable>
-          </View>
+      {/* ── Type ── */}
+      <View style={styles.section}>
+        <Text style={styles.secLabel}>You are</Text>
+        <View style={styles.typeRow}>
+          {(['offer', 'need'] as const).map((t) => {
+            const on = type === t;
+            return (
+              <Pressable
+                key={t}
+                onPress={() => setType(t)}
+                style={[styles.typeTile, on && styles.typeTileOn]}
+              >
+                <Text style={styles.tileIcon}>{t === 'offer' ? '🙋' : '🔍'}</Text>
+                <Text style={[styles.tileName, on && styles.tileNameOn]}>
+                  {t === 'offer' ? 'Offering' : 'Looking for'}
+                </Text>
+                <Text style={styles.tileHint}>
+                  {t === 'offer' ? 'Share your expertise' : 'Find a new skill'}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+      </View>
 
-        {/* Title — feels like writing in a journal */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>SKILL DETAILS</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Name your skill…"
-            placeholderTextColor={Colors.muted}
-            style={styles.titleInput}
-          />
+      {/* ── Skill details ── */}
+      <View style={styles.section}>
+        <Text style={styles.secLabel}>The skill</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Name your skill…"
+          placeholderTextColor={Colors.muted}
+          style={styles.titleInput}
+        />
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Scope, level, what you'd like in exchange…"
+          placeholderTextColor={Colors.muted}
+          style={styles.descInput}
+          multiline
+          maxLength={280}
+        />
+        <Text style={styles.charCount}>{description.length} / 280</Text>
+      </View>
+
+      {/* ── Category ── */}
+      <View style={[styles.section, styles.sectionLast]}>
+        <Text style={styles.secLabel}>Category</Text>
+        <View style={styles.catGrid}>
+          {CATEGORIES.map((item) => {
+            const on = item.label === category;
+            return (
+              <Pressable
+                key={item.label}
+                onPress={() => setCategory(item.label)}
+                style={[styles.catChip, on && styles.catChipOn]}
+              >
+                <Text style={styles.catEmoji}>{item.emoji}</Text>
+                <Text style={[styles.catName, on && styles.catNameOn]} numberOfLines={1}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+      </View>
 
-        {/* Description */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>DETAILS</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Scope, level, what you'd like in exchange…"
-            placeholderTextColor={Colors.muted}
-            style={styles.descInput}
-            multiline
-          />
-        </View>
-
-        {/* Category — 3-column text+emoji */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>CATEGORY</Text>
-          <View style={styles.categoryGrid}>
-            {CATEGORIES.map((item) => {
-              const selected = item.label === category;
-              return (
-                <Pressable
-                  key={item.label}
-                  onPress={() => setCategory(item.label)}
-                  style={[styles.catItem, selected && styles.catItemSelected]}
-                >
-                  <Text style={styles.catEmoji}>{item.emoji}</Text>
-                  <Text style={[styles.catLabel, selected && styles.catLabelSelected]} numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Submit */}
+      {/* ── Submit ── */}
+      <View style={styles.submitWrap}>
         <TouchableOpacity
-          style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, submitting && styles.submitBtnOff]}
           onPress={onSubmit}
           disabled={submitting}
-          activeOpacity={0.85}
+          activeOpacity={0.82}
         >
           <Text style={styles.submitText}>
-            {submitting ? 'Posting…' : 'Share with the community →'}
+            {submitting ? 'Posting…' : 'Post to community →'}
           </Text>
         </TouchableOpacity>
+        <Text style={styles.submitNote}>Visible to everyone in the community</Text>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
+  screen:  { flex: 1, backgroundColor: Colors.background },
   content: { paddingBottom: 100 },
-  pageHeader: {
-    paddingTop: 60,
+
+  /* Hero */
+  hero: {
+    paddingTop: 56,
     paddingHorizontal: Theme.spacing.lg,
-    paddingBottom: 12,
+    paddingBottom: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
   },
-  pageTitle: {
+  eyebrow: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: ACCENT,
+    marginBottom: 8,
+  },
+  heroTitle: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 28,
     color: Colors.ink,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
-  body: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 24,
-    gap: 28,
-  },
-  fieldGroup: { gap: 10 },
-  fieldLabel: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 11,
-    color: Colors.muted,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  // Type tiles
-  typeCol: { gap: 12 },
-  typeTile: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    padding: 16,
-    gap: 6,
-    backgroundColor: Colors.surface,
-  },
-  typeTileSelected: {
-    borderColor: Colors.border,
-    backgroundColor: Colors.accentSurface,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent,
-  },
-  tileTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: Theme.fontSize.body,
-    color: Colors.ink,
-  },
-  tileSub: {
+  heroSub: {
     fontFamily: 'Nunito_400Regular',
-    fontSize: Theme.fontSize.small,
+    fontSize: 13,
     color: Colors.muted,
+    marginTop: 6,
     lineHeight: 19,
   },
-  // Inputs — journal-style
+
+  /* Sections */
+  section: {
+    paddingHorizontal: Theme.spacing.lg,
+    paddingVertical: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  sectionLast: { borderBottomWidth: 0 },
+  secLabel: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    marginBottom: 12,
+  },
+
+  /* Type tiles */
+  typeRow: { flexDirection: 'row', gap: 10 },
+  typeTile: {
+    flex: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    padding: 16,
+    gap: 5,
+    backgroundColor: Colors.surface,
+  },
+  typeTileOn: {
+    borderWidth: 1.5,
+    borderColor: ACCENT_LIGHT,
+    backgroundColor: ACCENT_SURF,
+  },
+  tileIcon:  { fontSize: 20 },
+  tileName:  { fontFamily: 'Nunito_600SemiBold', fontSize: 13, color: Colors.ink },
+  tileNameOn: { color: ACCENT_TEXT },
+  tileHint:  { fontFamily: 'Nunito_400Regular', fontSize: 11, color: Colors.muted, lineHeight: 15 },
+
+  /* Inputs */
   titleInput: {
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 22,
+    fontSize: 21,
     color: Colors.ink,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 0,
-    letterSpacing: -0.3,
-    backgroundColor: Colors.surface,
+    letterSpacing: -0.4,
+    backgroundColor: 'transparent',
+    marginBottom: 16,
   },
   descInput: {
     fontFamily: 'Nunito_400Regular',
@@ -223,54 +252,64 @@ const styles = StyleSheet.create({
     color: Colors.body,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 0,
-    minHeight: 72,
+    minHeight: 60,
     textAlignVertical: 'top',
-    lineHeight: 24,
-    backgroundColor: Colors.surface,
+    lineHeight: 23,
+    backgroundColor: 'transparent',
   },
-  // Category grid — 3 columns
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  catItem: {
+  charCount: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+
+  /* Category */
+  catGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  catChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    width: '31%',
+    gap: 8,
+    width: '48%',
     paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  catItemSelected: {
-    backgroundColor: Colors.accentSurface,
-    borderColor: Colors.border,
+  catChipOn: {
+    borderWidth: 1.5,
+    borderColor: ACCENT_LIGHT,
+    backgroundColor: ACCENT_SURF,
   },
-  catEmoji: { fontSize: 14 },
-  catLabel: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: Theme.fontSize.small,
-    color: Colors.body,
-    flex: 1,
-  },
-  catLabelSelected: {
-    color: Colors.ink,
-    fontFamily: 'Nunito_600SemiBold',
-  },
-  // Submit
+  catEmoji: { fontSize: 16 },
+  catName:  { fontFamily: 'Nunito_400Regular', fontSize: 12, color: Colors.body, flex: 1 },
+  catNameOn: { color: ACCENT_TEXT, fontFamily: 'Nunito_600SemiBold' },
+
+  /* Submit */
+  submitWrap: { paddingHorizontal: Theme.spacing.lg, paddingTop: 20 },
   submitBtn: {
     backgroundColor: Colors.ink,
-    borderRadius: Theme.borderRadius.full,
+    borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',
   },
-  submitBtnDisabled: { opacity: 0.55 },
+  submitBtnOff: { opacity: 0.5 },
   submitText: {
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Nunito_600SemiBold',
     fontSize: Theme.fontSize.body,
     color: Colors.white,
     letterSpacing: 0.3,
+  },
+  submitNote: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    textAlign: 'center',
+    marginTop: 10,
   },
 });

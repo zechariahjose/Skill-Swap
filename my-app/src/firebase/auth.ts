@@ -6,7 +6,7 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, isFirebaseConfigured } from './config';
+import { getAuthInstance, db, isFirebaseConfigured } from './config';
 
 type DemoUser = {
   uid: string;
@@ -57,7 +57,7 @@ export async function register(
   password: string,
   name: string
 ): Promise<FirebaseUser> {
-  if (!isFirebaseConfigured || !auth || !db) {
+  if (!isFirebaseConfigured || !getAuthInstance() || !db) {
     if (demoUsersByEmail.has(email)) {
       throw new Error('Email already exists in demo mode.');
     }
@@ -87,7 +87,7 @@ export async function register(
     return demoCurrentUser;
   }
 
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const cred = await createUserWithEmailAndPassword(getAuthInstance(), email, password);
   const initials = name
     .split(' ')
     .map((w) => w[0])
@@ -108,7 +108,7 @@ export async function register(
 
 /** Sign in existing user */
 export async function login(email: string, password: string): Promise<FirebaseUser> {
-  if (!isFirebaseConfigured || !auth) {
+  if (!isFirebaseConfigured || !getAuthInstance()) {
     const demoUser = demoUsersByEmail.get(email);
     if (!demoUser || demoUser.password !== password) {
       throw new Error('Invalid email or password in demo mode.');
@@ -118,19 +118,19 @@ export async function login(email: string, password: string): Promise<FirebaseUs
     return demoCurrentUser;
   }
 
-  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const cred = await signInWithEmailAndPassword(getAuthInstance(), email, password);
   return cred.user;
 }
 
 /** Sign out */
 export async function signOut(): Promise<void> {
-  if (!isFirebaseConfigured || !auth) {
+  if (!isFirebaseConfigured || !getAuthInstance()) {
     demoCurrentUser = null;
     emitDemoAuth();
     return;
   }
 
-  await firebaseSignOut(auth);
+  await firebaseSignOut(getAuthInstance());
 }
 
 /** Get Firestore user profile */
@@ -146,7 +146,7 @@ export async function getUserProfile(uid: string) {
 
 /** Subscribe to auth state */
 export function subscribeToAuth(callback: (user: FirebaseUser | null) => void) {
-  if (!isFirebaseConfigured || !auth) {
+  if (!isFirebaseConfigured || !getAuthInstance()) {
     demoListeners.add(callback);
     callback(demoCurrentUser);
     return () => {
@@ -154,5 +154,5 @@ export function subscribeToAuth(callback: (user: FirebaseUser | null) => void) {
     };
   }
 
-  return onAuthStateChanged(auth, callback);
+  return onAuthStateChanged(getAuthInstance(), callback);
 }

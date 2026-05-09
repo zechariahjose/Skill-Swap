@@ -173,10 +173,17 @@ export function subscribeToSkills(callback: (skills: Skill[]) => void) {
   }
 
   const q = query(collection(db, 'skills'), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    const skills = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Skill));
-    callback(skills);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      const skills = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Skill));
+      callback(skills);
+    },
+    (error) => {
+      console.warn('subscribeToSkills snapshot error:', error);
+      callback([]);
+    }
+  );
 }
 
 // ─── SWAP REQUESTS ────────────────────────────────────────────────────────────
@@ -247,15 +254,31 @@ export function subscribeToSwapRequests(
   let incoming: SwapRequest[] = [];
   let outgoing: SwapRequest[] = [];
 
-  const unsubIn = onSnapshot(inQ, (snap) => {
-    incoming = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
-    callback(incoming, outgoing);
-  });
+  const unsubIn = onSnapshot(
+    inQ,
+    (snap) => {
+      incoming = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+      callback(incoming, outgoing);
+    },
+    (error) => {
+      console.warn('subscribeToSwapRequests incoming snapshot error:', error);
+      incoming = [];
+      callback(incoming, outgoing);
+    }
+  );
 
-  const unsubOut = onSnapshot(outQ, (snap) => {
-    outgoing = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
-    callback(incoming, outgoing);
-  });
+  const unsubOut = onSnapshot(
+    outQ,
+    (snap) => {
+      outgoing = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+      callback(incoming, outgoing);
+    },
+    (error) => {
+      console.warn('subscribeToSwapRequests outgoing snapshot error:', error);
+      outgoing = [];
+      callback(incoming, outgoing);
+    }
+  );
 
   return () => {
     unsubIn();

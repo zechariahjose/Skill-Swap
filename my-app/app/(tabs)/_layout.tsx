@@ -4,15 +4,115 @@ import { Colors } from '../../src/constants/Colors';
 import { Theme } from '../../src/constants/Theme';
 import { Redirect } from 'expo-router';
 import { useAuthContext } from '../../src/context/AuthContext';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
-function PostSkillButton({ onPress }: { onPress: () => void }) {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type TabRoute = {
+  key: string;
+  name: string;
+};
+
+type FloatingTabBarProps = {
+  state: { routes: TabRoute[]; index: number };
+  navigation: {
+    emit: (event: { type: string; target: string; canPreventDefault: boolean }) => { defaultPrevented: boolean };
+    navigate: (name: string) => void;
+  };
+};
+
+// ─── Icon map ─────────────────────────────────────────────────────────────────
+
+function getIcon(routeName: string, focused: boolean): keyof typeof Ionicons.glyphMap {
+  const map: Record<string, [string, string]> = {
+    home:     ['compass',         'compass-outline'],
+    requests: ['swap-horizontal', 'swap-horizontal-outline'],
+    profile:  ['person',          'person-outline'],
+  };
+  const [active, inactive] = map[routeName] ?? ['ellipse', 'ellipse-outline'];
+  return (focused ? active : inactive) as keyof typeof Ionicons.glyphMap;
+}
+
+// ─── Floating Tab Bar ─────────────────────────────────────────────────────────
+
+function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <TouchableOpacity style={styles.fab} onPress={onPress} activeOpacity={0.85}>
-      <Ionicons name="add" size={24} color={Colors.white} />
-    </TouchableOpacity>
+    <View style={[styles.wrapper, { bottom: insets.bottom + 20 }]}>
+
+      {/* Blur layer — iOS frosted glass, Android falls back to solid */}
+      {Platform.OS === 'ios' ? (
+        <BlurView intensity={24} tint="dark" style={[StyleSheet.absoluteFill, styles.blurClip]} />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.androidBg]} />
+      )}
+
+      {/* Subtle border on top of blur */}
+      <View style={styles.borderOverlay} pointerEvents="none" />
+
+      {/* Tab items */}
+      <View style={styles.inner}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const isCenter  = route.name === 'create';
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          // ── Center FAB ────────────────────────────────────────────────
+          if (isCenter) {
+            return (
+              <View key={route.key} style={styles.fabWrapper}>
+                <TouchableOpacity
+                  onPress={onPress}
+                  activeOpacity={0.8}
+                  style={styles.fab}
+                >
+                  <Ionicons name="add" size={26} color={Colors.base ?? '#111010'} />
+                </TouchableOpacity>
+              </View>
+            );
+          }
+
+          // ── Regular tab ───────────────────────────────────────────────
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              activeOpacity={0.7}
+              style={styles.tabItem}
+            >
+              <Ionicons
+                name={getIcon(route.name, isFocused)}
+                size={22}
+                color={isFocused ? Colors.accent : Colors.muted}
+              />
+              {isFocused && <View style={styles.activeDot} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 }
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
 
 export default function TabsLayout() {
   const { firebaseUser, loading } = useAuthContext();
@@ -23,95 +123,107 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: Colors.ink,
-        tabBarInactiveTintColor: Colors.muted,
-        tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
-        tabBarBackground: () => <View style={styles.tabBarBg} />,
-      }}
+      tabBar={(props) => <FloatingTabBar {...(props as unknown as FloatingTabBarProps)} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconWrap}>
-              <Ionicons name={focused ? 'compass' : 'compass-outline'} color={color} size={22} />
-              {focused && <View style={styles.activeDot} />}
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="requests"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconWrap}>
-              <Ionicons name={focused ? 'swap-horizontal' : 'swap-horizontal-outline'} color={color} size={22} />
-              {focused && <View style={styles.activeDot} />}
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="create"
-        options={{
-          tabBarIcon: () => null,
-          tabBarButton: (props) => (
-            <PostSkillButton onPress={() => props.onPress?.({} as any)} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconWrap}>
-              <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
-              {focused && <View style={styles.activeDot} />}
-            </View>
-          ),
-        }}
-      />
+      <Tabs.Screen name="home"     />
+      <Tabs.Screen name="requests" />
+      <Tabs.Screen name="create"   />
+      <Tabs.Screen name="profile"  />
     </Tabs>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const BAR_HEIGHT = 64;
+const FAB_SIZE   = 54;
+const FAB_LIFT   = 18;
+
+// The single radius value applied everywhere — gives the bar its curved,
+// squircle-like feel without being a harsh pill or a flat rectangle.
+const BAR_RADIUS = 28;
+
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 8,
-    elevation: 0,
-    shadowOpacity: 0,
+
+  wrapper: {
+    position:      'absolute',
+    left:          20,
+    right:         20,
+    height:        BAR_HEIGHT,
+    borderRadius:  BAR_RADIUS,   // ← curved, not a full pill (999)
+    overflow:      'visible',
+    // Layered shadow: deep primary + soft ambient
+    shadowColor:   '#000',
+    shadowOffset:  { width: 0, height: 10 },
+    shadowOpacity: 0.48,
+    shadowRadius:  28,
+    elevation:     18,
   },
-  tabBarBg: {
+
+  // BlurView needs the same radius to clip correctly on iOS
+  blurClip: {
+    borderRadius: BAR_RADIUS,
+    overflow:     'hidden',
+  },
+
+  androidBg: {
+    backgroundColor: 'rgba(26, 25, 24, 0.96)',
+    borderRadius:    BAR_RADIUS,
+  },
+
+  // Thin border sits above blur — gives the bar a raised edge
+  borderOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.surface,
+    borderRadius: BAR_RADIUS,
+    borderWidth:  1,
+    borderColor:  'rgba(255,255,255,0.09)',
   },
-  iconWrap: {
-    alignItems: 'center',
-    gap: 5,
+
+  inner: {
+    flex:              1,
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 8,
+    overflow:          'visible',
   },
+
+  tabItem: {
+    flex:            1,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingVertical: 4,
+    gap:             5,
+  },
+
   activeDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.ink,
+    width:           4,
+    height:          3,
+    borderRadius:    2,
+    backgroundColor: Colors.accent ?? '#C8A882',
   },
-  fab: {
-    top: -10,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: Colors.ink,
-    alignSelf: 'center',
-    alignItems: 'center',
+
+  fabWrapper: {
+    flex:           1,
+    alignItems:     'center',
     justifyContent: 'center',
-    ...Theme.shadow.float,
+    overflow:       'visible',
   },
+
+  fab: {
+    width:           FAB_SIZE,
+    height:          FAB_SIZE,
+    borderRadius:    FAB_SIZE / 2,
+    backgroundColor: Colors.accent ?? '#C8A882',
+    alignItems:      'center',
+    justifyContent:  'center',
+    marginTop:       -(FAB_LIFT * 2),
+    // Warm sand glow
+    shadowColor:     Colors.accent ?? '#C8A882',
+    shadowOffset:    { width: 0, height: 5 },
+    shadowOpacity:   0.38,
+    shadowRadius:    16,
+    elevation:       14,
+  },
+
 });

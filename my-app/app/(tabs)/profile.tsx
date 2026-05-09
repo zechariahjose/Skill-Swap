@@ -1,9 +1,18 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert, FlatList, StyleSheet, Text,
-  TextInput, TouchableOpacity, View,
+  Alert,
+  Animated,
+  Easing,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import SkillCard from '../components/SkillCard';
@@ -20,7 +29,26 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState(userProfile?.bio ?? '');
   const [skills, setSkills] = useState<Skill[]>([]);
   const [saving, setSaving] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+  const drawerTranslate = useRef(new Animated.Value(400)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+
+  const drawerTheme = themeMode === 'dark'
+    ? {
+        background: '#1A1C24',
+        surface: '#252B3A',
+        text: '#F2F2F7',
+        muted: '#9CA3B5',
+        border: '#3A4153',
+      }
+    : {
+        background: Colors.background,
+        surface: Colors.surface,
+        text: Colors.ink,
+        muted: Colors.muted,
+        border: Colors.border,
+      };
 
   const loadMySkills = async () => {
     if (!userProfile) return;
@@ -34,13 +62,19 @@ export default function ProfileScreen() {
     loadMySkills();
   }, [userProfile?.uid, userProfile?.name, userProfile?.bio]);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadMySkills();
+    }, [userProfile?.uid])
+  );
+
   const onSave = async () => {
     if (!userProfile) return;
     try {
       setSaving(true);
       await updateUserProfile(userProfile.uid, { name: name.trim(), bio: bio.trim() });
       await refreshProfile();
-      setEditOpen(false);
+      setDrawerOpen(false);
       Alert.alert('Saved', 'Your profile has been updated.');
     } catch (error) {
       Alert.alert('Save failed', error instanceof Error ? error.message : 'Try again.');
@@ -48,6 +82,23 @@ export default function ProfileScreen() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(drawerTranslate, {
+        toValue: drawerOpen ? 0 : 400,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: drawerOpen ? 1 : 0,
+        duration: drawerOpen ? 260 : 180,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [drawerOpen, drawerTranslate, overlayOpacity]);
 
   const onDeleteSkill = async (id: string) => {
     try {
@@ -74,9 +125,10 @@ export default function ProfileScreen() {
   const needsCount  = skills.filter((s) => s.type === 'need').length;
 
   return (
-    <FlatList
-      style={styles.screen}
-      contentContainerStyle={styles.content}
+    <>
+      <FlatList
+        style={styles.screen}
+        contentContainerStyle={styles.content}
       data={skills}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
@@ -85,9 +137,12 @@ export default function ProfileScreen() {
           {/* Profile card */}
           <View style={styles.profileCard}>
             <View style={styles.profileTop}>
-              <Avatar initials={userProfile.initials} size={64} />
-              <TouchableOpacity onPress={() => signOut()} style={styles.signOutBtn}>
-                <Text style={styles.signOutText}>Sign out</Text>
+              <TouchableOpacity
+                onPress={() => setDrawerOpen(true)}
+                style={styles.settingsBtn}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="settings-outline" size={20} color={drawerTheme.text} />
               </TouchableOpacity>
             </View>
 
@@ -103,43 +158,7 @@ export default function ProfileScreen() {
               {`${offersCount} offering · ${needsCount} looking for${memberSince ? ` · since ${memberSince}` : ''}`}
             </Text>
 
-            {/* Edit link */}
-            <TouchableOpacity onPress={() => setEditOpen(!editOpen)} style={styles.editLink}>
-              <Text style={styles.editLinkText}>{editOpen ? 'Cancel editing' : 'Edit profile →'}</Text>
-            </TouchableOpacity>
           </View>
-
-          {/* Edit panel */}
-          {editOpen && (
-            <View style={styles.editPanel}>
-              <Text style={styles.editTitle}>Edit profile</Text>
-              <View style={styles.inputGroup}>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Your name"
-                  placeholderTextColor={Colors.muted}
-                  style={styles.input}
-                />
-                <TextInput
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="A sentence about what you do or love"
-                  placeholderTextColor={Colors.muted}
-                  style={[styles.input, styles.bioInput]}
-                  multiline
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-                onPress={onSave}
-                disabled={saving}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save changes'}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Skills section */}
           <View style={styles.skillsHeader}>
@@ -173,6 +192,116 @@ export default function ProfileScreen() {
         </View>
       }
     />
+
+      {drawerOpen && (
+        <View style={styles.drawerLayer} pointerEvents="box-none">
+          <Animated.View
+            style={[styles.drawerOverlay, { opacity: overlayOpacity }]}
+          >
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setDrawerOpen(false)} />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.drawer,
+              {
+                transform: [{ translateX: drawerTranslate }],
+                backgroundColor: drawerTheme.background,
+                borderLeftColor: drawerTheme.border,
+              },
+            ]}
+          >
+            <View style={styles.drawerHeader}>
+              <View>
+                <Text style={[styles.drawerLabel, { color: drawerTheme.text }]}>Profile settings</Text>
+                <Text style={[styles.drawerHint, { color: drawerTheme.muted }]}>Edit details, controls, and sign out.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setDrawerOpen(false)} style={styles.drawerClose}>
+                <Ionicons name="close" size={22} color={drawerTheme.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.drawerSection}>
+              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Edit profile</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={drawerTheme.muted}
+                style={[styles.input, { color: drawerTheme.text, borderBottomColor: drawerTheme.border, backgroundColor: drawerTheme.surface }]}
+              />
+              <TextInput
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Your bio"
+                placeholderTextColor={drawerTheme.muted}
+                style={[styles.input, styles.bioInput, { color: drawerTheme.text, borderBottomColor: drawerTheme.border, backgroundColor: drawerTheme.surface }]}
+                multiline
+              />
+              <TouchableOpacity
+                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                onPress={onSave}
+                disabled={saving}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save changes'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.drawerSection}>
+              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Profile picture</Text>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: drawerTheme.surface, borderColor: drawerTheme.border }]}
+                onPress={() => Alert.alert('Change profile picture', 'This feature will be available soon.')}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.actionBtnText, { color: drawerTheme.text }]}>Change profile picture</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.drawerSection}>
+              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Theme</Text>
+              <View style={styles.themeRow}>
+                {(['light', 'dark'] as const).map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[
+                      styles.themeOption,
+                      {
+                        borderColor: drawerTheme.border,
+                        backgroundColor: themeMode === mode ? Colors.ink : drawerTheme.surface,
+                      },
+                    ]}
+                    onPress={() => setThemeMode(mode)}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      style={[
+                        styles.themeOptionText,
+                        {
+                          color: themeMode === mode ? Colors.white : drawerTheme.text,
+                        },
+                      ]}
+                    >
+                      {mode === 'light' ? 'Light' : 'Dark'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.drawerSection}> 
+              <TouchableOpacity
+                style={[styles.signOutBtnPanel, styles.signOutBtnPanelPrimary]}
+                onPress={() => signOut()}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.signOutBtnPanelText}>Sign out</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      )}
+    </>
   );
 }
 
@@ -182,16 +311,26 @@ const styles = StyleSheet.create({
   // Profile card
   profileCard: {
     backgroundColor: Colors.surface,
-    paddingTop: 60,
+    paddingTop: 72,
+    paddingBottom: 28,
     paddingHorizontal: Theme.spacing.lg,
-    paddingBottom: 24,
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
   },
   profileTop: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+  },
+  settingsBtn: {
+    padding: 10,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Colors.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   signOutBtn: { paddingTop: 4 },
   signOutText: {
@@ -201,18 +340,20 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 24,
+    fontSize: 28,
     color: Colors.ink,
-    letterSpacing: -0.3,
-    lineHeight: 32,
-  },
+    letterSpacing: -0.6,
+    textAlign: 'center',
+},
   profileBio: {
     fontFamily: 'Nunito_400Regular',
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.muted,
     fontStyle: 'italic',
-    lineHeight: 21,
-  },
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 22,
+},
   profileBioEmpty: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 14,
@@ -220,31 +361,141 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   statsRow: {
-    fontFamily: 'Nunito_400Regular',
+    marginTop: 12,
+    fontFamily: 'Nunito_600SemiBold',
     fontSize: 12,
     color: Colors.muted,
-    letterSpacing: 0.2,
-    marginTop: 4,
+    letterSpacing: 0.6,
     textAlign: 'center',
   },
   editLink: {
-    marginTop: 8,
-    alignSelf: 'flex-end',
+    marginTop: 14,
   },
+
   editLinkText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.small,
     color: Colors.accent,
+    letterSpacing: 0.3,
+  },
+  drawerLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  drawerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  drawer: {
+    width: '82%',
+    height: '100%',
+    padding: Theme.spacing.lg,
+    borderLeftWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 20,
+  },
+  drawerBody: {
+    flex: 1,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 14,
+  },
+  drawerClose: {
+    padding: 8,
+  },
+  drawerLabel: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 24,
+    color: Colors.ink,
+  },
+  drawerHint: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 4,
+  },
+  drawerSection: {
+    marginBottom: 20,
+  },
+  drawerSectionTitle: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 12,
+    color: Colors.muted,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  actionBtn: {
+    borderRadius: Theme.borderRadius.full,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  actionBtnText: {
+    fontFamily: 'Nunito_700Bold',
+    color: Colors.ink,
+    fontSize: Theme.fontSize.small,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  themeOption: {
+    flex: 1,
+    borderRadius: Theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  themeOptionActive: {
+    backgroundColor: Colors.ink,
+    borderColor: Colors.ink,
+  },
+  themeOptionText: {
+    fontFamily: 'Nunito_600SemiBold',
+    color: Colors.ink,
+  },
+  themeOptionTextActive: {
+    color: Colors.white,
+  },
+  signOutBtnPanel: {
+    borderRadius: Theme.borderRadius.full,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  signOutBtnPanelPrimary: {
+    backgroundColor: Colors.terracotta,
+  },
+  signOutBtnPanelText: {
+    fontFamily: 'Nunito_700Bold',
+    fontSize: Theme.fontSize.small,
+    color: Colors.white,
   },
   // Edit panel
   editPanel: {
     backgroundColor: Colors.surface,
     paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 20,
-    paddingBottom: 24,
+    paddingTop: 24,
+    paddingBottom: 28,
+    borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    gap: 16,
+    borderColor: Colors.border,
+    gap: 18,
   },
   editTitle: {
     fontFamily: 'DMSerifDisplay_400Regular',
@@ -260,11 +511,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.body,
     color: Colors.body,
-    paddingVertical: 14,
-    paddingHorizontal: 0,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    backgroundColor: 'transparent',
   },
   bioInput: { minHeight: 72, textAlignVertical: 'top' },
   saveBtn: {
@@ -283,8 +532,8 @@ const styles = StyleSheet.create({
   // Skills section
   skillsHeader: {
     paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 20,
-    paddingBottom: 4,
+    paddingTop: 28,
+    paddingBottom: 8,
   },
   skillsLabel: {
     fontFamily: 'Nunito_700Bold',
@@ -302,8 +551,9 @@ const styles = StyleSheet.create({
   addBtn: {
     backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
+    marginTop: 8,
   },
   addBtnText: {
     fontFamily: 'Nunito_700Bold',
@@ -311,4 +561,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     letterSpacing: 0.3,
   },
+  // content: {
+  // paddingBottom: 120,
+  // },
 });

@@ -32,16 +32,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsub = subscribeToAuth(async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        await loadProfile(fbUser.uid);
-      } else {
-        setUserProfile(null);
-      }
-      setLoading(false);
-    });
-    return unsub;
+    let unsub: (() => void) | undefined;
+
+    const timer = setTimeout(() => {
+      unsub = subscribeToAuth(async (fbUser) => {
+        setFirebaseUser(fbUser);
+        if (fbUser) {
+          await loadProfile(fbUser.uid);
+        } else {
+          setUserProfile(null);
+        }
+        setLoading(false);
+      });
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      if (unsub) unsub();
+    };
   }, []);
 
   return (
