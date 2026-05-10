@@ -285,3 +285,61 @@ export function subscribeToSwapRequests(
     unsubOut();
   };
 }
+
+// ─── ADMIN FUNCTIONS ──────────────────────────────────────────────────────────
+
+export async function getAllUsers(): Promise<User[]> {
+  if (!isFirebaseConfigured || !db) {
+    // For demo, collect unique users from skills
+    const userMap = new Map<string, User>();
+    demoSkills.forEach(skill => {
+      if (!userMap.has(skill.userId)) {
+        userMap.set(skill.userId, {
+          uid: skill.userId,
+          name: skill.userName,
+          initials: skill.userInitials,
+          bio: '',
+          createdAt: new Date(),
+        });
+      }
+    });
+    return Array.from(userMap.values());
+  }
+
+  const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as User));
+}
+
+export async function getAllSwapRequests(): Promise<SwapRequest[]> {
+  if (!isFirebaseConfigured || !db) {
+    return [...demoSwapRequests].sort(
+      (a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0)
+    );
+  }
+
+  const q = query(collection(db, 'swap_requests'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+}
+
+export async function deleteUser(uid: string) {
+  if (!isFirebaseConfigured || !db) {
+    // In demo, just remove from skills and requests
+    demoSkills = demoSkills.filter(s => s.userId !== uid);
+    demoSwapRequests = demoSwapRequests.filter(r => r.fromUserId !== uid && r.toUserId !== uid);
+    emitDemoSkills();
+    return;
+  }
+
+  await deleteDoc(doc(db, 'users', uid));
+}
+
+export async function deleteSwapRequest(id: string) {
+  if (!isFirebaseConfigured || !db) {
+    demoSwapRequests = demoSwapRequests.filter(r => r.id !== id);
+    return;
+  }
+
+  await deleteDoc(doc(db, 'swap_requests', id));
+}
