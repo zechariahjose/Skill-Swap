@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 import { SwapRequest, SwapStatus } from '../../src/types';
 import Avatar from './Avatar';
@@ -13,75 +13,70 @@ interface SwapRequestCardProps {
   onComplete?: (id: string) => void;
 }
 
-const STATUS_CONFIG: Record<SwapStatus, { label: string; color: string; dot: string }> = {
-  pending:   { label: 'Pending',   color: Colors.statusPending, dot: Colors.statusPending },
-  accepted:  { label: 'Accepted',  color: Colors.statusGreen,   dot: Colors.statusGreen },
-  rejected:  { label: 'Declined',  color: Colors.statusRed,     dot: Colors.statusRed },
-  completed: { label: 'Completed', color: Colors.muted,          dot: Colors.muted },
-};
-
 export default function SwapRequestCard({
   request, mode, onAccept, onReject, onComplete,
 }: SwapRequestCardProps) {
+  const { colors } = useTheme();
   const status = STATUS_CONFIG[request.status];
   const isIncoming = mode === 'incoming';
   const otherInitials = isIncoming ? request.fromUserInitials : request.toUserInitials;
-  const otherName     = isIncoming ? request.fromUserName     : request.toUserName;
+  const otherName = isIncoming ? request.fromUserName : request.toUserName;
 
   return (
-    <View style={styles.card}>
-      {/* Row 1: avatar + name + status */}
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
       <View style={styles.headerRow}>
         <Avatar initials={otherInitials} size={40} />
         <View style={styles.nameGroup} pointerEvents="none">
-          <Text style={styles.name}>{otherName}</Text>
+          <Text style={[styles.name, { color: colors.ink }]}>{otherName}</Text>
         </View>
         <View style={styles.statusGroup}>
           <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
-          <Text style={styles.statusLabel}>{status.label}</Text>
+          <Text style={[styles.statusLabel, { color: colors.muted }]}>{status.label}</Text>
         </View>
       </View>
 
-      {/* Row 2: section label */}
-      <Text style={styles.sectionLabel}>SKILL EXCHANGE</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>SKILL EXCHANGE</Text>
 
-      {/* Row 3: pills */}
       <View style={styles.exchangeRow}>
-        <View style={styles.skillPill}>
-          <Text style={styles.skillText} numberOfLines={1}>{request.offeredSkillTitle}</Text>
+        <View style={[styles.skillPill, { backgroundColor: colors.softSurface, borderColor: colors.border }]}> 
+          <Text style={[styles.skillText, { color: colors.body }]} numberOfLines={1}>{request.offeredSkillTitle}</Text>
         </View>
-        <Text style={styles.exchangeSymbol}>↔</Text>
-        <View style={styles.skillPill}>
-          <Text style={styles.skillText} numberOfLines={1}>{request.requestedSkillTitle}</Text>
+        <Text style={[styles.exchangeSymbol, { color: colors.muted }]}>↔</Text>
+        <View style={[styles.skillPill, { backgroundColor: colors.softSurface, borderColor: colors.border }]}> 
+          <Text style={[styles.skillText, { color: colors.body }]} numberOfLines={1}>{request.requestedSkillTitle}</Text>
         </View>
       </View>
 
-      {/* Row 4: actions */}
       {isIncoming && request.status === 'pending' && (
         <View style={styles.actions}>
           <TouchableOpacity onPress={() => onReject?.(request.id)} activeOpacity={0.6}>
-            <Text style={styles.declineLink}>Decline</Text>
+            <Text style={[styles.declineLink, { color: colors.muted }]}>Decline</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onAccept?.(request.id)} activeOpacity={0.85} style={styles.acceptBtn}>
-            <Text style={styles.acceptBtnText}>Accept →</Text>
+          <TouchableOpacity onPress={() => onAccept?.(request.id)} activeOpacity={0.85} style={[styles.acceptBtn, { backgroundColor: colors.ink }]}> 
+            <Text style={[styles.acceptBtnText, { color: colors.white }]}>Accept →</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {request.status === 'accepted' && (
-        <TouchableOpacity onPress={() => onComplete?.(request.id)} activeOpacity={0.85} style={styles.completeBtn}>
-          <Text style={styles.completeBtnText}>Mark as completed →</Text>
+        <TouchableOpacity onPress={() => onComplete?.(request.id)} activeOpacity={0.85} style={[styles.completeBtn, { backgroundColor: colors.ink }]}> 
+          <Text style={[styles.completeBtnText, { color: colors.white }]}>Mark as completed →</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
+const STATUS_CONFIG: Record<SwapStatus, { label: string; color: string; dot: string }> = {
+  pending: { label: 'Pending', color: '#8E9ACA', dot: '#8E9ACA' },
+  accepted: { label: 'Accepted', color: '#7FD1B8', dot: '#7FD1B8' },
+  rejected: { label: 'Declined', color: '#F38E99', dot: '#F38E99' },
+  completed: { label: 'Completed', color: '#9AA8C4', dot: '#9AA8C4' },
+};
+
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -98,7 +93,6 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 17,
-    color: Colors.ink,
   },
   statusGroup: {
     flexDirection: 'row',
@@ -113,12 +107,10 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 12,
-    color: Colors.muted,
   },
   sectionLabel: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 10,
-    color: Colors.muted,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -131,9 +123,7 @@ const styles = StyleSheet.create({
   },
   skillPill: {
     flex: 1,
-    backgroundColor: Colors.softSurface,
     borderWidth: 1,
-    borderColor: Colors.border,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: Theme.borderRadius.full,
@@ -141,12 +131,10 @@ const styles = StyleSheet.create({
   skillText: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.body,
   },
   exchangeSymbol: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 14,
-    color: Colors.muted,
   },
   actions: {
     flexDirection: 'row',
@@ -157,10 +145,8 @@ const styles = StyleSheet.create({
   declineLink: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.muted,
   },
   acceptBtn: {
-    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -168,11 +154,9 @@ const styles = StyleSheet.create({
   acceptBtnText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.small,
-    color: Colors.white,
   },
   completeBtn: {
     alignSelf: 'flex-end',
-    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -180,6 +164,5 @@ const styles = StyleSheet.create({
   completeBtnText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.small,
-    color: Colors.white,
   },
 });

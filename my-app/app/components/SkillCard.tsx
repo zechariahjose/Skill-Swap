@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 import { Skill, CATEGORIES } from '../../src/types';
 
@@ -12,41 +12,37 @@ interface SkillCardProps {
 }
 
 export default function SkillCard({ skill, onSwapPress, isOwn, onDeletePress }: SkillCardProps) {
+  const { colors } = useTheme();
   const cat = CATEGORIES.find((c) => c.label === skill.category);
   const emoji = cat?.emoji ?? '✦';
   const isOffer = skill.type === 'offer';
 
   return (
-    <View style={styles.card}>
-      {/* Row 1: name + type badge */}
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
       <View style={styles.nameRow}>
-        <Text style={styles.userName}>{skill.userName}</Text>
-        <View style={styles.typePill}>
-          <Text style={styles.typeText}>{isOffer ? 'Offering' : 'Looking for'}</Text>
+        <Text style={[styles.userName, { color: colors.body }]}>{skill.userName}</Text>
+        <View style={[styles.typePill, { backgroundColor: colors.softSurface }]}> 
+          <Text style={[styles.typeText, { color: colors.body }]}>{isOffer ? 'Offering' : 'Looking for'}</Text>
         </View>
       </View>
 
-      {/* Row 2: dominant title */}
-      <Text style={styles.title}>{skill.title}</Text>
+      <Text style={[styles.title, { color: colors.ink }]}>{skill.title}</Text>
 
-      {/* Row 3: description */}
       {skill.description ? (
-        <Text style={styles.description} numberOfLines={2}>{skill.description}</Text>
+        <Text style={[styles.description, { color: colors.muted }]} numberOfLines={2}>{skill.description}</Text>
       ) : null}
 
-      {/* Row 4: subtle divider */}
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      {/* Row 5: category + action */}
       <View style={styles.bottomRow}>
-        <Text style={styles.category}>{emoji}  {skill.category}</Text>
+        <Text style={[styles.category, { color: colors.muted }]}>{emoji}  {skill.category}</Text>
         {isOwn ? (
           <TouchableOpacity onPress={() => onDeletePress?.(skill.id)} activeOpacity={0.6}>
-            <Text style={styles.removeLink}>Remove</Text>
+            <Text style={[styles.removeLink, { color: colors.muted }]}>Remove</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={() => onSwapPress?.(skill)} activeOpacity={0.7}>
-            <Text style={styles.swapLink}>Let's swap →</Text>
+            <Text style={[styles.swapLink, { color: colors.accent }]}>Let's swap →</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -56,10 +52,8 @@ export default function SkillCard({ skill, onSwapPress, isOwn, onDeletePress }: 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
     padding: 16,
     marginBottom: 12,
   },
@@ -72,10 +66,8 @@ const styles = StyleSheet.create({
   userName: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.body,
   },
   typePill: {
-    backgroundColor: Colors.softSurface,
     borderRadius: Theme.borderRadius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -83,13 +75,11 @@ const styles = StyleSheet.create({
   typeText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 11,
-    color: Colors.body,
     letterSpacing: 0.2,
   },
   title: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 20,
-    color: Colors.ink,
     lineHeight: 26,
     letterSpacing: -0.3,
     marginBottom: 6,
@@ -97,13 +87,11 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.muted,
     lineHeight: 19.5,
     marginBottom: 14,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.border,
     marginBottom: 12,
   },
   bottomRow: {
@@ -114,17 +102,14 @@ const styles = StyleSheet.create({
   category: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 12,
-    color: Colors.muted,
     letterSpacing: 0.2,
   },
   swapLink: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.small,
-    color: Colors.accent,
   },
   removeLink: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.muted,
   },
 });

@@ -1,10 +1,11 @@
-import { Redirect } from 'expo-router';
+﻿import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuthContext } from '../src/context/AuthContext';
-import { Colors } from '../src/constants/Colors';
+import { useTheme } from '../src/context/ThemeContext';
 
 export default function IndexScreen() {
   const { firebaseUser, loading } = useAuthContext();
+  const { colors } = useTheme();
 
   if (loading) {
     return (
@@ -13,10 +14,10 @@ export default function IndexScreen() {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: Colors.cream,
+          backgroundColor: colors.cream,
         }}
       >
-        <ActivityIndicator size="large" color={Colors.terracotta} />
+        <ActivityIndicator size="large" color={colors.terracotta} />
       </View>
     );
   }

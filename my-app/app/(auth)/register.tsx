@@ -1,19 +1,19 @@
-import { Link, router } from 'expo-router';
+﻿import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StatusBar,
 } from 'react-native';
 import { register } from '../../src/firebase/auth';
-import { Colors } from '../../src/constants/Colors';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 
 export default function RegisterScreen() {
@@ -21,6 +21,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { colors, themeMode } = useTheme();
 
   const onRegister = async () => {
     if (!name || !email || password.length < 6) {
@@ -42,29 +43,27 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={themeMode === 'dark' ? 'light-content' : 'dark-content'} />
       <ScrollView
-        contentContainerStyle={styles.inner}
+        contentContainerStyle={[styles.inner, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Brand */}
         <View style={styles.brandBlock}>
-          <Text style={styles.brandName}>Skill Swap</Text>
-          <Text style={styles.brandTagline}>Share skills, not money.</Text>
+          <Text style={[styles.brandName, { color: colors.ink }]}>Skill Swap</Text>
+          <Text style={[styles.brandTagline, { color: colors.muted }]}>Share skills, not money.</Text>
         </View>
 
-        {/* Form */}
-        <View style={styles.formCard}>
+        <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <View style={styles.inputGroup}>
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor={Colors.muted}
-              style={styles.input}
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { color: colors.body, borderBottomColor: colors.border }]}
             />
             <TextInput
               value={email}
@@ -72,35 +71,34 @@ export default function RegisterScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="Email"
-              placeholderTextColor={Colors.muted}
-              style={styles.input}
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { color: colors.body, borderBottomColor: colors.border }]}
             />
             <TextInput
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               placeholder="Password (6+ chars)"
-              placeholderTextColor={Colors.muted}
-              style={styles.input}
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { color: colors.body, borderBottomColor: colors.border }]}
             />
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
+            style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled, { backgroundColor: colors.ink }]}
             onPress={onRegister}
             disabled={submitting}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryBtnText}>
+            <Text style={[styles.primaryBtnText, { color: colors.white }]}> 
               {submitting ? 'Creating account…' : 'Join the community'}
             </Text>
           </TouchableOpacity>
 
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity style={styles.linkBtn} activeOpacity={0.8}>
-              <Text style={styles.linkText}>
-                Already a member?{' '}
-                <Text style={styles.linkAccent}>Sign in</Text>
+              <Text style={[styles.linkText, { color: colors.muted }]}>Already a member?{' '}
+                <Text style={[styles.linkAccent, { color: colors.accent }]}>Sign in</Text>
               </Text>
             </TouchableOpacity>
           </Link>
@@ -113,7 +111,6 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flexGrow: 1,
@@ -128,21 +125,17 @@ const styles = StyleSheet.create({
   brandName: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 40,
-    color: Colors.ink,
     letterSpacing: -0.5,
     lineHeight: 46,
   },
   brandTagline: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
-    color: Colors.muted,
     fontStyle: 'italic',
   },
   formCard: {
-    backgroundColor: Colors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
     padding: 16,
     gap: 16,
   },
@@ -152,15 +145,12 @@ const styles = StyleSheet.create({
   input: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.body,
-    color: Colors.body,
     paddingVertical: 14,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
     backgroundColor: 'transparent',
   },
   primaryBtn: {
-    backgroundColor: Colors.ink,
     borderRadius: Theme.borderRadius.full,
     paddingVertical: 16,
     alignItems: 'center',
@@ -171,7 +161,6 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.body,
-    color: Colors.white,
     letterSpacing: 0.3,
   },
   linkBtn: {
@@ -181,10 +170,8 @@ const styles = StyleSheet.create({
   linkText: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.muted,
   },
   linkAccent: {
     fontFamily: 'Nunito_700Bold',
-    color: Colors.accent,
   },
 });

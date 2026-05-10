@@ -11,6 +11,7 @@ import {
   orderBy,
   serverTimestamp,
   onSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import { updateDemoProfile } from './auth';
@@ -19,6 +20,17 @@ import { Skill, SwapRequest, SwapStatus, User } from '../types';
 let demoSkills: Skill[] = [];
 let demoSwapRequests: SwapRequest[] = [];
 const demoSkillListeners = new Set<(skills: Skill[]) => void>();
+
+// Helper function to convert Firestore Timestamps to Date objects
+function convertTimestamps<T extends Record<string, any>>(data: T): T {
+  const result = { ...data };
+  Object.keys(result).forEach(key => {
+    if (result[key] instanceof Timestamp) {
+      result[key] = result[key].toDate();
+    }
+  });
+  return result;
+}
 
 function emitDemoSkills() {
   const sorted = [...demoSkills].sort(
@@ -89,7 +101,7 @@ export async function getUserById(uid: string): Promise<User | null> {
   }
 
   const snap = await getDoc(doc(db, 'users', uid));
-  return snap.exists() ? (snap.data() as User) : null;
+  return snap.exists() ? convertTimestamps({ uid: snap.id, ...snap.data() } as User) : null;
 }
 
 // ─── SKILLS ───────────────────────────────────────────────────────────────────
@@ -142,7 +154,7 @@ export async function getAllSkills(): Promise<Skill[]> {
 
   const q = query(collection(db, 'skills'), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Skill));
+  return snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as Skill));
 }
 
 export async function getSkillsByUser(userId: string): Promise<Skill[]> {
@@ -158,7 +170,7 @@ export async function getSkillsByUser(userId: string): Promise<Skill[]> {
     orderBy('createdAt', 'desc')
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Skill));
+  return snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as Skill));
 }
 
 export function subscribeToSkills(callback: (skills: Skill[]) => void) {
@@ -176,7 +188,7 @@ export function subscribeToSkills(callback: (skills: Skill[]) => void) {
   return onSnapshot(
     q,
     (snap) => {
-      const skills = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Skill));
+      const skills = snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as Skill));
       callback(skills);
     },
     (error) => {
@@ -257,7 +269,7 @@ export function subscribeToSwapRequests(
   const unsubIn = onSnapshot(
     inQ,
     (snap) => {
-      incoming = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+      incoming = snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as SwapRequest));
       callback(incoming, outgoing);
     },
     (error) => {
@@ -270,7 +282,7 @@ export function subscribeToSwapRequests(
   const unsubOut = onSnapshot(
     outQ,
     (snap) => {
-      outgoing = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+      outgoing = snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as SwapRequest));
       callback(incoming, outgoing);
     },
     (error) => {
@@ -308,7 +320,7 @@ export async function getAllUsers(): Promise<User[]> {
 
   const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as User));
+  return snap.docs.map((d) => convertTimestamps({ uid: d.id, ...d.data() } as User));
 }
 
 export async function getAllSwapRequests(): Promise<SwapRequest[]> {
@@ -320,7 +332,7 @@ export async function getAllSwapRequests(): Promise<SwapRequest[]> {
 
   const q = query(collection(db, 'swap_requests'), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as SwapRequest));
+  return snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as SwapRequest));
 }
 
 export async function deleteUser(uid: string) {

@@ -16,6 +16,10 @@ import { Theme } from '../src/constants/Theme';
 import { deleteSkill, deleteSwapRequest, deleteUser, getAllSkills, getAllSwapRequests, getAllUsers } from '../src/firebase/firestore';
 import { Skill, SwapRequest, User } from '../src/types';
 
+// SECURITY WARNING: This admin panel is currently accessible via hardcoded
+// credentials in login.tsx. This is a DEVELOPMENT/TESTING feature only.
+// REMOVE or SECURE this functionality before production deployment.
+
 export default function AdminScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);

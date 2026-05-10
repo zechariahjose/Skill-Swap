@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -16,36 +16,37 @@ import EmptyState from '../components/EmptyState';
 import SkeletonCard from '../components/SkeletonCard';
 import SkillCard from '../components/SkillCard';
 import Avatar from '../components/Avatar';
-import { Colors } from '../../src/constants/Colors';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { createSwapRequest, getSkillsByUser } from '../../src/firebase/firestore';
 import { useSkills } from '../../src/hooks/useSkills';
 import { CATEGORIES, Category, Skill } from '../../src/types';
 
 function getGreeting(name?: string) {
   const h = new Date().getHours();
-
   let greeting = 'Good evening';
   if (h < 12) greeting = 'Good morning';
   else if (h < 17) greeting = 'Good afternoon';
-
   return `${greeting}${name ? `, ${name}` : ''}`;
 }
 
 export default function HomeScreen() {
   const { skills, loading, refreshSkills } = useSkills();
-  const { userProfile } = useAuthContext();
-  const [search, setSearch] = useState('');
+  const { userProfile }                    = useAuthContext();
+  const { colors }                         = useTheme();
+  const [search, setSearch]                = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing]        = useState(false);
+
+  const styles = getStyles(colors);
 
   const filteredSkills = useMemo(() => {
     return skills.filter((skill) => {
       if (skill.userId === userProfile?.uid) return false;
       const categoryOk = selectedCategory === 'All' || skill.category === selectedCategory;
-      const query = search.toLowerCase().trim();
-      const textOk =
+      const query      = search.toLowerCase().trim();
+      const textOk     =
         query.length === 0 ||
         skill.title.toLowerCase().includes(query) ||
         skill.description.toLowerCase().includes(query);
@@ -55,8 +56,7 @@ export default function HomeScreen() {
 
   const activeUsers = useMemo(() => {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    const users = new Map<string, { initials: string; name: string }>();
-
+    const users  = new Map<string, { initials: string; name: string }>();
     skills.forEach((skill) => {
       const createdAt = skill.createdAt;
       const timestamp =
@@ -65,48 +65,39 @@ export default function HomeScreen() {
           : typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt
           ? (createdAt as { seconds: number }).seconds * 1000
           : 0;
-
       if (timestamp >= cutoff && !users.has(skill.userId)) {
-        users.set(skill.userId, {
-          initials: skill.userInitials,
-          name: skill.userName,
-        });
+        users.set(skill.userId, { initials: skill.userInitials, name: skill.userName });
       }
     });
-
     return Array.from(users.values()).slice(0, 8);
   }, [skills]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      await refreshSkills();
-    } finally {
-      setRefreshing(false);
-    }
+    try { await refreshSkills(); } finally { setRefreshing(false); }
   };
 
   const sendSwapRequest = async (requestedSkill: Skill) => {
     if (!userProfile) return;
     try {
-      const mySkills = await getSkillsByUser(userProfile.uid);
+      const mySkills    = await getSkillsByUser(userProfile.uid);
       const offeredSkill = mySkills.find((s) => s.type === 'offer');
       if (!offeredSkill) {
         Alert.alert('Add a skill first', 'Post at least one offered skill before requesting swaps.');
         return;
       }
       await createSwapRequest({
-        fromUserId: userProfile.uid,
-        fromUserName: userProfile.name,
-        fromUserInitials: userProfile.initials,
-        toUserId: requestedSkill.userId,
-        toUserName: requestedSkill.userName,
-        toUserInitials: requestedSkill.userInitials,
-        offeredSkillId: offeredSkill.id,
-        offeredSkillTitle: offeredSkill.title,
-        requestedSkillId: requestedSkill.id,
+        fromUserId:          userProfile.uid,
+        fromUserName:        userProfile.name,
+        fromUserInitials:    userProfile.initials,
+        toUserId:            requestedSkill.userId,
+        toUserName:          requestedSkill.userName,
+        toUserInitials:      requestedSkill.userInitials,
+        offeredSkillId:      offeredSkill.id,
+        offeredSkillTitle:   offeredSkill.title,
+        requestedSkillId:    requestedSkill.id,
         requestedSkillTitle: requestedSkill.title,
-        status: 'pending',
+        status:              'pending',
       });
       Alert.alert('Request sent', 'Your swap request has been sent.');
     } catch (error) {
@@ -126,79 +117,93 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.muted}
+            tintColor={colors.muted}
           />
         }
-        renderItem={({ item }) => (
-          <View style={styles.cardPad}>
+        renderItem={({ item, index }) => (
+          <View style={[styles.cardPad, index === 0 && styles.cardFirst]}>
             <SkillCard skill={item} onSwapPress={sendSwapRequest} />
           </View>
         )}
+        ItemSeparatorComponent={() => <View style={styles.cardGap} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+
         ListHeaderComponent={
           <View style={styles.header}>
-            {/* ── Greeting ── */}
+
+            {/* ── Greeting block ────────────────────────────────────── */}
             <View style={styles.greetingBlock}>
-              <View style={styles.greetingBadge}>
-                <Ionicons name="sparkles" size={12} color={Colors.muted} />
-                <Text style={styles.greetingBadgeText}>
+
+              {/* Greeting badge — subtle pill */}
+              <View style={[styles.greetingBadge, { backgroundColor: colors.softSurface ?? colors.surface }]}>
+                <Ionicons name="sparkles" size={11} color={colors.muted} />
+                <Text style={[styles.greetingBadgeText, { color: colors.muted }]}>
                   {getGreeting(firstName)}
                 </Text>
               </View>
+
+              {/* Display headline */}
               <Text style={styles.headline}>
-                What will you{'\n'}
-                <Text style={styles.headlineAccent}>learn</Text> today?
+                {'What will you\n'}
+                <Text style={[styles.headlineAccent, { color: colors.accent ?? '#C8A882' }]}>learn</Text>
+                {' today?'}
               </Text>
-              <Text style={styles.subHeadline}>
+
+              {/* Subline — skill count or fallback */}
+              <Text style={[styles.subHeadline, { color: colors.muted }]}>
                 {filteredSkills.length > 0
                   ? `${filteredSkills.length} skills available to swap`
                   : 'Explore skills from your community'}
               </Text>
             </View>
 
-            {/* ── Search ── */}
-            <View style={styles.searchWrapper}>
-              <View style={styles.searchRow}>
-                <Ionicons name="search" size={16} color={Colors.muted} style={styles.searchIcon} />
-                <TextInput
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder="Search skills..."
-                  placeholderTextColor={Colors.muted}
-                  style={styles.searchInput}
-                  returnKeyType="search"
-                />
-                {search.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-                    <Ionicons name="close-circle" size={16} color={Colors.muted} />
-                  </TouchableOpacity>
-                )}
-              </View>
+            {/* ── Search bar ────────────────────────────────────────── */}
+            <View style={[styles.searchWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="search" size={15} color={colors.muted} />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search skills…"
+                placeholderTextColor={colors.muted}
+                style={[styles.searchInput, { color: colors.ink }]}
+                returnKeyType="search"
+              />
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={15} color={colors.muted} />
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* ── Active Today ── */}
+            {/* ── Active Today ──────────────────────────────────────── */}
             {activeUsers.length > 0 && (
               <View style={styles.section}>
-                <SectionHeader label="Active Today" />
+                <SectionHeader label="Active Today" colors={colors} />
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.peopleRow}
                 >
-                  {activeUsers.map((member) => (
-                    <View key={member.initials + member.name} style={styles.personItem}>
-                      <View style={styles.avatarRing}>
+                  {activeUsers.map((member, i) => (
+                    <View key={member.initials + member.name + i} style={styles.personItem}>
+                      {/* Ring around avatar — accent tinted */}
+                      <View style={[styles.avatarRing, { borderColor: colors.border }]}>
                         <Avatar initials={member.initials} size={44} />
                       </View>
-                      <Text style={styles.personName}>{member.name}</Text>
+                      <Text
+                        style={[styles.personName, { color: colors.muted }]}
+                        numberOfLines={1}
+                      >
+                        {member.name.split(' ')[0]}
+                      </Text>
                     </View>
                   ))}
                 </ScrollView>
               </View>
             )}
 
-            {/* ── Category chips ── */}
+            {/* ── Category chips ────────────────────────────────────── */}
             <FlatList
               data={['All', ...CATEGORIES.map((c) => c.label)] as (Category | 'All')[]}
               horizontal
@@ -214,35 +219,39 @@ export default function HomeScreen() {
               contentContainerStyle={styles.chips}
             />
 
-            {/* ── Skill Board header ── */}
+            {/* ── Skill Board header ────────────────────────────────── */}
             <View style={styles.boardHeader}>
-              <SectionHeader label="Skill Board" />
+              <SectionHeader label="Skill Board" colors={colors} />
               {!loading && filteredSkills.length > 0 && (
-                <View style={styles.countPill}>
-                  <Text style={styles.countText}>{filteredSkills.length}</Text>
+                <View style={[styles.countPill, { backgroundColor: colors.softSurface ?? colors.surface }]}>
+                  <Text style={[styles.countText, { color: colors.muted }]}>
+                    {filteredSkills.length}
+                  </Text>
                 </View>
               )}
             </View>
 
-            {/* Skeleton loading */}
+            {/* ── Skeleton loading ─────────────────────────────────── */}
             {loading && (
-              <View style={[styles.cardPad, { gap: 12, marginTop: 8 }]}>
+              <View style={styles.skeletonWrap}>
                 <SkeletonCard />
                 <SkeletonCard />
                 <SkeletonCard />
               </View>
             )}
 
-            <View style={styles.boardSpacer} />
           </View>
         }
+
         ListEmptyComponent={
           !loading ? (
-            <EmptyState
-              emoji="✦"
-              title="Nothing here yet"
-              subtitle="Try another category, or be the first to post a skill."
-            />
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                emoji="✦"
+                title="Nothing here yet"
+                subtitle="Try another category, or be the first to post a skill."
+              />
+            </View>
           ) : null
         }
       />
@@ -250,175 +259,212 @@ export default function HomeScreen() {
   );
 }
 
-function SectionHeader({ label }: { label: string }) {
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({
+  label,
+  colors,
+}: {
+  label: string;
+  colors: typeof import('../../src/constants/Colors').Colors;
+}) {
   return (
-    <View style={styles.sectionHeaderRow}>
-      <View style={styles.sectionDot} />
-      <Text style={styles.sectionLabel}>{label.toUpperCase()}</Text>
+    <View style={sectionStyles.row}>
+      <View style={[sectionStyles.dot, { backgroundColor: colors.accent ?? '#C8A882' }]} />
+      <Text style={[sectionStyles.label, { color: colors.muted }]}>
+        {label.toUpperCase()}
+      </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  listContent: {
-    paddingBottom: 96,
-  },
-  header: {
-    backgroundColor: Colors.background,
-  },
-
-  // ── Greeting ──
-  greetingBlock: {
-    paddingTop: 64,
-    paddingHorizontal: Theme.spacing.lg,
-    paddingBottom: 20,
-    gap: 8,
-  },
-  greetingBadge: {
+const sectionStyles = StyleSheet.create({
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Theme.borderRadius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 4,
+    alignItems:    'center',
+    gap:           8,
+    marginBottom:  12,
   },
-  greetingBadgeText: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 11,
-    color: Colors.muted,
-    letterSpacing: 0.3,
+  dot: {
+    width:        5,
+    height:       5,
+    borderRadius: 2.5,
   },
-  headline: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 34,
-    color: Colors.ink,
-    lineHeight: 40,
-    letterSpacing: -0.8,
-  },
-  headlineAccent: {
-    fontFamily: 'DMSerifDisplay_400Italic',
-    color: Colors.accent,
-  },
-  subHeadline: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 13,
-    color: Colors.muted,
-    marginTop: 2,
-  },
-
-  // ── Search ──
-  searchWrapper: {
-    paddingHorizontal: Theme.spacing.lg,
-    marginBottom: 4,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    height: 46,
-    backgroundColor: Colors.surface,
-    borderRadius: Theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: Theme.fontSize.body,
-    color: Colors.body,
-    flex: 1,
-    paddingVertical: 0,
-  },
-
-  // ── Active Today ──
-  section: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 28,
-    paddingBottom: 4,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 16,
-  },
-  sectionDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: Colors.muted,
-    opacity: 0.5,
-  },
-  sectionLabel: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 10,
-    color: Colors.muted,
-    letterSpacing: 1.4,
-  },
-  peopleRow: {
-    gap: 18,
-    paddingBottom: 4,
-    paddingRight: 4,
-  },
-  personItem: {
-    alignItems: 'center',
-    gap: 7,
-  },
-  avatarRing: {
-    padding: 2,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  personName: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 11,
-    color: Colors.muted,
-  },
-
-  // ── Category chips ──
-  chips: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 20,
-    paddingBottom: 22,
-    gap: 8,
-  },
-
-  // ── Skill Board ──
-  boardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Theme.spacing.lg,
-    marginBottom: 0,
-  },
-  countPill: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Theme.borderRadius.full,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-  },
-  countText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 11,
-    color: Colors.muted,
-  },
-  boardSpacer: { height: 14 },
-
-  cardPad: {
-    paddingHorizontal: Theme.spacing.lg,
+  label: {
+    fontFamily:    'Nunito_700Bold',
+    fontSize:      10,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
   },
 });
+
+// ─── Screen styles ────────────────────────────────────────────────────────────
+
+const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =>
+  StyleSheet.create({
+
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background ?? '#111010',
+    },
+
+    listContent: {
+      paddingBottom: 100,
+    },
+
+    header: {
+      paddingBottom: 8,
+    },
+
+    // ── Greeting ──────────────────────────────────────────────────────────
+
+    greetingBlock: {
+      paddingHorizontal: Theme.spacing.lg,
+      paddingTop:        56,
+      paddingBottom:     20,
+      gap:               0,
+    },
+
+    greetingBadge: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      gap:            6,
+      alignSelf:      'flex-start',
+      borderRadius:   Theme.borderRadius.full,
+      paddingHorizontal: 12,
+      paddingVertical:   7,
+      marginBottom:   16,
+    },
+
+    greetingBadgeText: {
+      fontFamily:    'Nunito_600SemiBold',
+      fontSize:      11,
+      letterSpacing: 0.4,
+    },
+
+    headline: {
+      fontFamily:    'DMSerifDisplay_400Regular',
+      fontSize:      34,
+      color:         colors.ink    ?? '#F0EBE3',
+      lineHeight:    42,
+      letterSpacing: -0.8,
+    },
+
+    headlineAccent: {
+      // color applied inline from colors.accent
+    },
+
+    subHeadline: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize:   13,
+      marginTop:  10,
+      lineHeight: 20,
+    },
+
+    // ── Search ────────────────────────────────────────────────────────────
+
+    searchWrapper: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      gap:               10,
+      marginHorizontal:  Theme.spacing.lg,
+      marginBottom:      24,
+      borderRadius:      16,
+      borderWidth:       1,
+      paddingHorizontal: 16,
+      paddingVertical:   13,
+    },
+
+    searchInput: {
+      flex:       1,
+      fontFamily: 'Nunito_400Regular',
+      fontSize:   14,
+    },
+
+    // ── Active Today ──────────────────────────────────────────────────────
+
+    section: {
+      paddingBottom:    20,
+      paddingHorizontal: Theme.spacing.lg,
+    },
+
+    peopleRow: {
+      gap: 16,
+    },
+
+    personItem: {
+      alignItems: 'center',
+      width:      56,
+      gap:        6,
+    },
+
+    avatarRing: {
+      borderWidth:  1.5,
+      borderRadius: 999,
+      padding:      2,
+    },
+
+    personName: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize:   11,
+      textAlign:  'center',
+    },
+
+    // ── Category chips ────────────────────────────────────────────────────
+
+    chips: {
+      paddingHorizontal: Theme.spacing.lg,
+      paddingBottom:     20,
+      gap:               8,
+    },
+
+    // ── Skill Board ───────────────────────────────────────────────────────
+
+    boardHeader: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+      paddingHorizontal: Theme.spacing.lg,
+      marginBottom:      4,
+    },
+
+    countPill: {
+      borderRadius:      Theme.borderRadius.full,
+      paddingHorizontal: 12,
+      paddingVertical:   5,
+    },
+
+    countText: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize:   11,
+    },
+
+    // ── Cards ─────────────────────────────────────────────────────────────
+
+    cardPad: {
+      paddingHorizontal: Theme.spacing.lg,
+    },
+
+    cardFirst: {
+      marginTop: 8,
+    },
+
+    cardGap: {
+      height: 10,
+    },
+
+    // ── Skeleton ──────────────────────────────────────────────────────────
+
+    skeletonWrap: {
+      paddingHorizontal: Theme.spacing.lg,
+      gap:               10,
+      marginTop:         8,
+    },
+
+    // ── Empty ─────────────────────────────────────────────────────────────
+
+    emptyWrap: {
+      paddingHorizontal: Theme.spacing.lg,
+      paddingTop:        8,
+    },
+  });

@@ -1,54 +1,34 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
-  Animated,
-  Easing,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import SkillCard from '../components/SkillCard';
-import { Colors } from '../../src/constants/Colors';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useTheme } from '../../src/context/ThemeContext';
 import { signOut } from '../../src/firebase/auth';
 import { deleteSkill, getSkillsByUser, updateUserProfile } from '../../src/firebase/firestore';
 import { Skill } from '../../src/types';
+import ProfileDrawer from './ProfileDrawer';
 
 export default function ProfileScreen() {
   const { userProfile, refreshProfile } = useAuthContext();
-  const [name, setName] = useState(userProfile?.name ?? '');
-  const [bio, setBio] = useState(userProfile?.bio ?? '');
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [saving, setSaving] = useState(false);
+  const { colors } = useTheme();
+  const [name, setName]           = useState(userProfile?.name ?? '');
+  const [bio, setBio]             = useState(userProfile?.bio  ?? '');
+  const [skills, setSkills]       = useState<Skill[]>([]);
+  const [saving, setSaving]       = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
-  const drawerTranslate = useRef(new Animated.Value(400)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
 
-  const drawerTheme = themeMode === 'dark'
-    ? {
-        background: '#1A1C24',
-        surface: '#252B3A',
-        text: '#F2F2F7',
-        muted: '#9CA3B5',
-        border: '#3A4153',
-      }
-    : {
-        background: Colors.background,
-        surface: Colors.surface,
-        text: Colors.ink,
-        muted: Colors.muted,
-        border: Colors.border,
-      };
+  const styles = getStyles(colors);
 
   const loadMySkills = async () => {
     if (!userProfile) return;
@@ -58,14 +38,12 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     setName(userProfile?.name ?? '');
-    setBio(userProfile?.bio ?? '');
+    setBio(userProfile?.bio  ?? '');
     loadMySkills();
   }, [userProfile?.uid, userProfile?.name, userProfile?.bio]);
 
   useFocusEffect(
-    useCallback(() => {
-      loadMySkills();
-    }, [userProfile?.uid])
+    useCallback(() => { loadMySkills(); }, [userProfile?.uid])
   );
 
   const onSave = async () => {
@@ -83,23 +61,6 @@ export default function ProfileScreen() {
     }
   };
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(drawerTranslate, {
-        toValue: drawerOpen ? 0 : 400,
-        duration: 260,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacity, {
-        toValue: drawerOpen ? 1 : 0,
-        duration: drawerOpen ? 260 : 180,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [drawerOpen, drawerTranslate, overlayOpacity]);
-
   const onDeleteSkill = async (id: string) => {
     try {
       await deleteSkill(id);
@@ -111,7 +72,7 @@ export default function ProfileScreen() {
 
   if (!userProfile) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, styles.emptyScreen]}>
         <EmptyState emoji="👤" title="Profile unavailable" subtitle="Please sign in again." />
       </View>
     );
@@ -129,439 +90,325 @@ export default function ProfileScreen() {
       <FlatList
         style={styles.screen}
         contentContainerStyle={styles.content}
-      data={skills}
-      keyExtractor={(item) => item.id}
-      showsVerticalScrollIndicator={false}
-      ListHeaderComponent={
-        <View>
-          {/* Profile card */}
-          <View style={styles.profileCard}>
-            <View style={styles.profileTop}>
+        data={skills}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+
+        ListHeaderComponent={
+          <View>
+
+            {/* ── Top row ─────────────────────────────────────────────── */}
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>Profile</Text>
               <TouchableOpacity
                 onPress={() => setDrawerOpen(true)}
                 style={styles.settingsBtn}
                 activeOpacity={0.8}
               >
-                <Ionicons name="settings-outline" size={20} color={drawerTheme.text} />
+                <Text style={styles.settingsIcon}>⚙️</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.profileName}>{userProfile.name}</Text>
-            {userProfile.bio ? (
-              <Text style={styles.profileBio}>{userProfile.bio}</Text>
-            ) : (
-              <Text style={styles.profileBioEmpty}>No bio yet.</Text>
-            )}
+            {/* ── Hero card ───────────────────────────────────────────── */}
+            <View style={styles.heroCard}>
 
-            {/* Quiet stats row */}
-            <Text style={styles.statsRow}>
-              {`${offersCount} offering · ${needsCount} looking for${memberSince ? ` · since ${memberSince}` : ''}`}
-            </Text>
+              {/* Avatar */}
+              <Avatar initials={userProfile.initials} size={76} />
+
+              {/* Name + bio */}
+              <View style={styles.nameBlock}>
+                <Text style={styles.profileName}>{userProfile.name}</Text>
+                {userProfile.bio ? (
+                  <Text style={styles.profileBio}>{userProfile.bio}</Text>
+                ) : (
+                  <Text style={styles.profileBioEmpty}>No bio yet.</Text>
+                )}
+              </View>
+
+              {/* Divider */}
+              <View style={styles.statsDivider} />
+
+              {/* Stats row — 3 columns with vertical separators */}
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{offersCount}</Text>
+                  <Text style={styles.statLabel}>offering</Text>
+                </View>
+                <View style={styles.statSep} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{needsCount}</Text>
+                  <Text style={styles.statLabel}>looking for</Text>
+                </View>
+                {memberSince && (
+                  <>
+                    <View style={styles.statSep} />
+                    <View style={styles.statItem}>
+                      <Text style={styles.statNumber}>{memberSince.split(' ')[1]}</Text>
+                      <Text style={styles.statLabel}>since {memberSince.split(' ')[0]}</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+
+            </View>
+
+            {/* ── Section label ───────────────────────────────────────── */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>YOUR SKILLS</Text>
+              <Text style={styles.sectionCount}>{skills.length}</Text>
+            </View>
 
           </View>
+        }
 
-          {/* Skills section */}
-          <View style={styles.skillsHeader}>
-            <Text style={styles.skillsLabel}>Your Skills</Text>
+        ListEmptyComponent={
+          <View style={styles.cardPad}>
+            <EmptyState
+              emoji="✦"
+              title="No skills posted yet"
+              subtitle="Tap the + button to share your first skill with the community."
+            />
           </View>
-        </View>
-      }
-      ListEmptyComponent={
-        <View style={styles.cardPad}>
-          <EmptyState
-            emoji="✦"
-            title="No skills posted yet"
-            subtitle="Tap the + button to share your first skill with the community."
-          />
-        </View>
-      }
-      renderItem={({ item }) => (
-        <View style={styles.cardPad}>
-          <SkillCard skill={item} isOwn onDeletePress={onDeleteSkill} />
-        </View>
-      )}
-      ListFooterComponent={
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => router.push('/(tabs)/create')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.addBtnText}>＋ Add a skill</Text>
-          </TouchableOpacity>
-        </View>
-      }
-    />
+        }
 
-      {drawerOpen && (
-        <View style={styles.drawerLayer} pointerEvents="box-none">
-          <Animated.View
-            style={[styles.drawerOverlay, { opacity: overlayOpacity }]}
-          >
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setDrawerOpen(false)} />
-          </Animated.View>
-          <Animated.View
-            style={[
-              styles.drawer,
-              {
-                transform: [{ translateX: drawerTranslate }],
-                backgroundColor: drawerTheme.background,
-                borderLeftColor: drawerTheme.border,
-              },
-            ]}
-          >
-            <View style={styles.drawerHeader}>
-              <View>
-                <Text style={[styles.drawerLabel, { color: drawerTheme.text }]}>Profile settings</Text>
-                <Text style={[styles.drawerHint, { color: drawerTheme.muted }]}>Edit details, controls, and sign out.</Text>
-              </View>
-              <TouchableOpacity onPress={() => setDrawerOpen(false)} style={styles.drawerClose}>
-                <Ionicons name="close" size={22} color={drawerTheme.muted} />
-              </TouchableOpacity>
-            </View>
+        renderItem={({ item }) => (
+          <View style={styles.cardPad}>
+            <SkillCard skill={item} isOwn onDeletePress={onDeleteSkill} />
+          </View>
+        )}
 
-            <View style={styles.drawerSection}>
-              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Edit profile</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Your name"
-                placeholderTextColor={drawerTheme.muted}
-                style={[styles.input, { color: drawerTheme.text, borderBottomColor: drawerTheme.border, backgroundColor: drawerTheme.surface }]}
-              />
-              <TextInput
-                value={bio}
-                onChangeText={setBio}
-                placeholder="Your bio"
-                placeholderTextColor={drawerTheme.muted}
-                style={[styles.input, styles.bioInput, { color: drawerTheme.text, borderBottomColor: drawerTheme.border, backgroundColor: drawerTheme.surface }]}
-                multiline
-              />
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-                onPress={onSave}
-                disabled={saving}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save changes'}</Text>
-              </TouchableOpacity>
-            </View>
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
 
-            <View style={styles.drawerSection}>
-              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Profile picture</Text>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: drawerTheme.surface, borderColor: drawerTheme.border }]}
-                onPress={() => Alert.alert('Change profile picture', 'This feature will be available soon.')}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.actionBtnText, { color: drawerTheme.text }]}>Change profile picture</Text>
-              </TouchableOpacity>
-            </View>
+        ListFooterComponent={
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => router.push('/(tabs)/create')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.addBtnText}>＋ Add a skill</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
-            <View style={styles.drawerSection}>
-              <Text style={[styles.drawerSectionTitle, { color: drawerTheme.muted }]}>Theme</Text>
-              <View style={styles.themeRow}>
-                {(['light', 'dark'] as const).map((mode) => (
-                  <TouchableOpacity
-                    key={mode}
-                    style={[
-                      styles.themeOption,
-                      {
-                        borderColor: drawerTheme.border,
-                        backgroundColor: themeMode === mode ? Colors.ink : drawerTheme.surface,
-                      },
-                    ]}
-                    onPress={() => setThemeMode(mode)}
-                    activeOpacity={0.85}
-                  >
-                    <Text
-                      style={[
-                        styles.themeOptionText,
-                        {
-                          color: themeMode === mode ? Colors.white : drawerTheme.text,
-                        },
-                      ]}
-                    >
-                      {mode === 'light' ? 'Light' : 'Dark'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.drawerSection}> 
-              <TouchableOpacity
-                style={[styles.signOutBtnPanel, styles.signOutBtnPanelPrimary]}
-                onPress={() => signOut()}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.signOutBtnPanelText}>Sign out</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      )}
+      <ProfileDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        name={name}
+        bio={bio}
+        onNameChange={setName}
+        onBioChange={setBio}
+        onSave={onSave}
+        saving={saving}
+        onSignOut={() => signOut()}
+      />
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: 100 },
-  // Profile card
-  profileCard: {
-    backgroundColor: Colors.surface,
-    paddingTop: 72,
-    paddingBottom: 28,
-    paddingHorizontal: Theme.spacing.lg,
-    alignItems: 'center',
-    gap: 10,
-  },
-  profileTop: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  settingsBtn: {
-    padding: 10,
-    borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.surface,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  signOutBtn: { paddingTop: 4 },
-  signOutText: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: Theme.fontSize.small,
-    color: Colors.muted,
-  },
-  profileName: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 28,
-    color: Colors.ink,
-    letterSpacing: -0.6,
-    textAlign: 'center',
-},
-  profileBio: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 15,
-    color: Colors.muted,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    maxWidth: 260,
-    lineHeight: 22,
-},
-  profileBioEmpty: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 14,
-    color: Colors.border,
-    fontStyle: 'italic',
-  },
-  statsRow: {
-    marginTop: 12,
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 12,
-    color: Colors.muted,
-    letterSpacing: 0.6,
-    textAlign: 'center',
-  },
-  editLink: {
-    marginTop: 14,
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-  editLinkText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: Theme.fontSize.small,
-    color: Colors.accent,
-    letterSpacing: 0.3,
-  },
-  drawerLayer: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-  },
-  drawerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-  },
-  drawer: {
-    width: '82%',
-    height: '100%',
-    padding: Theme.spacing.lg,
-    borderLeftWidth: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 22,
-    elevation: 20,
-  },
-  drawerBody: {
-    flex: 1,
-  },
-  drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    gap: 14,
-  },
-  drawerClose: {
-    padding: 8,
-  },
-  drawerLabel: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 24,
-    color: Colors.ink,
-  },
-  drawerHint: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: 12,
-    color: Colors.muted,
-    marginTop: 4,
-  },
-  drawerSection: {
-    marginBottom: 20,
-  },
-  drawerSectionTitle: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 12,
-    color: Colors.muted,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  actionBtn: {
-    borderRadius: Theme.borderRadius.full,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  actionBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    color: Colors.ink,
-    fontSize: Theme.fontSize.small,
-  },
-  themeRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  themeOption: {
-    flex: 1,
-    borderRadius: Theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  themeOptionActive: {
-    backgroundColor: Colors.ink,
-    borderColor: Colors.ink,
-  },
-  themeOptionText: {
-    fontFamily: 'Nunito_600SemiBold',
-    color: Colors.ink,
-  },
-  themeOptionTextActive: {
-    color: Colors.white,
-  },
-  signOutBtnPanel: {
-    borderRadius: Theme.borderRadius.full,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  signOutBtnPanelPrimary: {
-    backgroundColor: Colors.terracotta,
-  },
-  signOutBtnPanelText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: Theme.fontSize.small,
-    color: Colors.white,
-  },
-  // Edit panel
-  editPanel: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 24,
-    paddingBottom: 28,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: Colors.border,
-    gap: 18,
-  },
-  editTitle: {
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 20,
-    color: Colors.ink,
-    letterSpacing: -0.3,
-  },
-  inputGroup: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  input: {
-    fontFamily: 'Nunito_400Regular',
-    fontSize: Theme.fontSize.body,
-    color: Colors.body,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  bioInput: { minHeight: 72, textAlignVertical: 'top' },
-  saveBtn: {
-    backgroundColor: Colors.ink,
-    borderRadius: Theme.borderRadius.full,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveBtnDisabled: { opacity: 0.55 },
-  saveBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: Theme.fontSize.small,
-    color: Colors.white,
-    letterSpacing: 0.3,
-  },
-  // Skills section
-  skillsHeader: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 28,
-    paddingBottom: 8,
-  },
-  skillsLabel: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: 11,
-    color: Colors.muted,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  cardPad: { paddingHorizontal: Theme.spacing.lg },
-  footer: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: 6,
-    paddingBottom: 12,
-  },
-  addBtn: {
-    backgroundColor: Colors.ink,
-    borderRadius: Theme.borderRadius.full,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  addBtnText: {
-    fontFamily: 'Nunito_700Bold',
-    fontSize: Theme.fontSize.body,
-    color: Colors.white,
-    letterSpacing: 0.3,
-  },
-  // content: {
-  // paddingBottom: 120,
-  // },
-});
+const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =>
+  StyleSheet.create({
+
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background ?? '#111010',
+    },
+
+    emptyScreen: {
+      justifyContent: 'center',
+      alignItems:     'center',
+    },
+
+    content: {
+      paddingBottom: 120,
+    },
+
+    // ── Header row ──────────────────────────────────────────────────────────
+
+    headerRow: {
+      paddingHorizontal: Theme.spacing.lg,
+      paddingTop:        60,
+      paddingBottom:     16,
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+    },
+
+    headerTitle: {
+      fontFamily:    'DMSerifDisplay_400Regular',
+      fontSize:      30,
+      color:         colors.ink ?? '#F0EBE3',
+      letterSpacing: -0.5,
+    },
+
+    settingsBtn: {
+      width:           44,
+      height:          44,
+      borderRadius:    22,
+      backgroundColor: colors.surface ?? '#1C1B1A',
+      borderWidth:     1,
+      borderColor:     colors.border  ?? '#2E2C2A',
+      alignItems:      'center',
+      justifyContent:  'center',
+    },
+
+    settingsIcon: {
+      fontSize: 18,
+    },
+
+    // ── Hero card ────────────────────────────────────────────────────────────
+
+    heroCard: {
+      marginHorizontal:  Theme.spacing.lg,
+      backgroundColor:   colors.surface ?? '#1C1B1A',
+      borderRadius:      24,
+      borderWidth:       1,
+      borderColor:       colors.border  ?? '#2E2C2A',
+      paddingTop:        32,
+      paddingBottom:     0,
+      paddingHorizontal: Theme.spacing.lg,
+      alignItems:        'center',
+      overflow:          'hidden',
+      gap:               10,
+      shadowColor:       '#000',
+      shadowOffset:      { width: 0, height: 8 },
+      shadowOpacity:     0.35,
+      shadowRadius:      20,
+      elevation:         10,
+    },
+
+    nameBlock: {
+      alignItems: 'center',
+      gap:        4,
+    },
+
+    profileName: {
+      fontFamily:    'DMSerifDisplay_400Regular',
+      fontSize:      26,
+      color:         colors.ink    ?? '#F0EBE3',
+      letterSpacing: -0.5,
+      textAlign:     'center',
+    },
+
+    profileBio: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize:   14,
+      color:      colors.muted   ?? '#6B6760',
+      fontStyle:  'italic',
+      textAlign:  'center',
+      maxWidth:   240,
+      lineHeight: 20,
+    },
+
+    profileBioEmpty: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize:   14,
+      color:      colors.border  ?? '#2E2C2A',
+      fontStyle:  'italic',
+    },
+
+    // Full-width divider inside the card
+    statsDivider: {
+      width:           '100%',
+      height:          1,
+      backgroundColor: colors.border ?? '#2E2C2A',
+      marginTop:       4,
+    },
+
+    // ── Stats row ────────────────────────────────────────────────────────────
+
+    statsRow: {
+      flexDirection:   'row',
+      width:           '100%',
+      paddingVertical: 20,
+    },
+
+    statItem: {
+      flex:       1,
+      alignItems: 'center',
+      gap:        3,
+    },
+
+    statNumber: {
+      fontFamily:    'DMSerifDisplay_400Regular',
+      fontSize:      20,
+      color:         colors.ink   ?? '#F0EBE3',
+      letterSpacing: -0.3,
+    },
+
+    statLabel: {
+      fontFamily:    'Nunito_400Regular',
+      fontSize:      11,
+      color:         colors.muted ?? '#6B6760',
+      letterSpacing: 0.3,
+    },
+
+    // Thin vertical separator between stats
+    statSep: {
+      width:           1,
+      height:          36,
+      backgroundColor: colors.border ?? '#2E2C2A',
+      alignSelf:       'center',
+    },
+
+    // ── Section header ───────────────────────────────────────────────────────
+
+    sectionHeader: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      justifyContent:    'space-between',
+      paddingHorizontal: Theme.spacing.lg,
+      paddingTop:        28,
+      paddingBottom:     12,
+    },
+
+    sectionLabel: {
+      fontFamily:    'Nunito_700Bold',
+      fontSize:      10,
+      color:         colors.muted ?? '#6B6760',
+      letterSpacing: 1.6,
+      textTransform: 'uppercase',
+    },
+
+    sectionCount: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize:   12,
+      color:      colors.muted ?? '#6B6760',
+    },
+
+    // ── Cards ────────────────────────────────────────────────────────────────
+
+    cardPad: {
+      paddingHorizontal: Theme.spacing.lg,
+    },
+
+    // ── Footer ───────────────────────────────────────────────────────────────
+
+    footer: {
+      paddingHorizontal: Theme.spacing.lg,
+      paddingTop:        16,
+      paddingBottom:     12,
+    },
+
+    addBtn: {
+      backgroundColor: colors.ink ?? '#F0EBE3',
+      borderRadius:    Theme.borderRadius.full ?? 999,
+      paddingVertical: 18,
+      alignItems:      'center',
+      shadowColor:     colors.ink ?? '#F0EBE3',
+      shadowOffset:    { width: 0, height: 4 },
+      shadowOpacity:   0.12,
+      shadowRadius:    16,
+      elevation:       6,
+    },
+
+    addBtnText: {
+      fontFamily:    'Nunito_700Bold',
+      fontSize:      Theme.fontSize.body ?? 15,
+      color:         colors.background   ?? '#111010',
+      letterSpacing: 0.3,
+    },
+  });

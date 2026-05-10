@@ -1,8 +1,8 @@
-import React from 'react';
+﻿import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
-import { CATEGORIES, Category } from '../../src/types';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
+import { CATEGORIES, Category } from '../../src/types';
 
 interface CategoryChipProps {
   label: Category | 'All';
@@ -11,17 +11,18 @@ interface CategoryChipProps {
 }
 
 export default function CategoryChip({ label, selected, onPress }: CategoryChipProps) {
+  const { colors } = useTheme();
   const cat = CATEGORIES.find((c) => c.label === label);
   const emoji = cat?.emoji ?? '✦';
 
   return (
     <TouchableOpacity
-      style={[styles.chip, selected && styles.chipSelected]}
+      style={[styles.chip, { borderColor: colors.border, backgroundColor: selected ? colors.softSurface : colors.surface }, selected && styles.chipSelected]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <Text style={styles.emoji}>{label === 'All' ? '✦' : emoji}</Text>
-      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
+      <Text style={[styles.label, { color: selected ? colors.ink : colors.body }, selected && styles.labelSelected]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -35,13 +36,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: Theme.borderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
     marginRight: 8,
   },
   chipSelected: {
-    backgroundColor: Colors.softSurface,
-    borderColor: Colors.border,
+    borderWidth: 1,
   },
   emoji: {
     fontSize: 13,
@@ -49,11 +47,9 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'Nunito_400Regular',
     fontSize: Theme.fontSize.small,
-    color: Colors.body,
     letterSpacing: 0.2,
   },
   labelSelected: {
-    color: Colors.ink,
     fontFamily: 'Nunito_700Bold',
   },
 });

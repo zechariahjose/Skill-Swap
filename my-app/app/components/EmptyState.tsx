@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
+import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 
 interface EmptyStateProps {
@@ -12,16 +12,18 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ emoji, title, subtitle, actionLabel, onAction }: EmptyStateProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
-      <View style={styles.iconCircle}>
-        <Text style={styles.emoji}>{emoji}</Text>
+      <View style={[styles.iconCircle, { backgroundColor: colors.softSurface }]}> 
+        <Text style={[styles.emoji, { color: colors.accent }]}>{emoji}</Text>
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[styles.title, { color: colors.ink }]}>{title}</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>{subtitle}</Text>
       {actionLabel && onAction && (
         <TouchableOpacity onPress={onAction} style={styles.actionBtn} activeOpacity={0.7}>
-          <Text style={styles.actionText}>{actionLabel} →</Text>
+          <Text style={[styles.actionText, { color: colors.accent }]}>{actionLabel} →</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -41,7 +43,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: Colors.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -52,7 +53,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 22,
-    color: Colors.ink,
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 28,
@@ -60,7 +60,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 14,
-    color: Colors.muted,
     textAlign: 'center',
     lineHeight: 21,
     maxWidth: 260,
@@ -72,6 +71,5 @@ const styles = StyleSheet.create({
   actionText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: Theme.fontSize.small,
-    color: Colors.accent,
   },
 });
