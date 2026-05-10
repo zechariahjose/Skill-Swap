@@ -1,19 +1,140 @@
-Skill Swap is a mobile application that enables users to exchange skills without using money. Built with Flutter or React Native and powered by Firebase, the platform allows users to create profiles, list their skills, browse others’ offerings, and send swap requests. 
-It promotes collaboration, learning, and accessibility by connecting people who can trade services like tutoring, design, or coding—creating a community-driven, cash-free marketplace.
+# Skill Swap
 
-## Admin Access
+A cross-platform mobile application built with **React Native + Expo** that enables users to exchange skills without using money. Users can share what they know, discover others’ talents, and connect through a collaborative, community-driven marketplace.
 
-The application includes an admin panel for managing platform data. To access the admin dashboard:
+Whether it’s tutoring, graphic design, coding, music lessons, or language practice — **Skill Swap** helps people learn and grow together through skill exchange.
 
-1. Navigate to the login screen
-2. Enter the following credentials:
-   - **Email:** `admin`
-   - **Password:** `admin`
-3. This will redirect you to the admin panel where you can view and manage:
-   - All registered users
-   - All posted skills
-   - All swap requests
-   - Delete functionality for users, skills, and requests
+---
 
-**Note:** The admin access is a development/testing feature and should be secured or removed in production deployments.
+## Features
+
+- **Skill Exchange System**  
+  Create and list skills you can teach or skills you want to learn.
+- **User Profiles**  
+  Showcase personal information, offered skills, and learning interests.
+- **Skill Discovery**  
+  Browse available skills shared by other users in the community.
+- **Swap Requests**  
+  Send, receive, and manage skill exchange requests.
+- **Real-Time Sync**  
+  Firebase integration enables live updates and seamless data synchronization.
+- **Dark / Light Mode**  
+  Toggle between themes for a personalized user experience.
+- **Cross-Platform Support**  
+  Runs smoothly on both Android and iOS using Expo.
+- **Admin Panel (Development Only)**  
+  Includes development tools for managing users and content.
+
+---
+
+
+# Prerequisites
+Before running the project, make sure you have installed:
+
+- Node.js **v16+**
+- npm or yarn
+- Expo CLI
+
+Install Expo CLI globally:
+
+```bash
+npm install -g expo-cli
+```
+
+You will also need:
+- A Firebase project *(optional for demo mode)*
+- Android Studio / Xcode emulator or Expo Go mobile app
+
+---
+
+# Getting Started
+
+```bash
+git clone <repository-url>
+cd my-app
+```
+
+---
+
+## Install Dependencies
+
+Using npm:
+```bash
+npm install
+```
+Using yarn:
+```bash
+yarn install
+```
+
+---
+
+## Configure Firebase (Optional)
+Create a `.env` file in the root directory:
+
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+> If Firebase credentials are not provided, the app automatically runs in **Demo Mode**.
+
+---
+
+#  Running the App
+## Start Development Server
+
+```bash
+npm start
+```
+---
+## Run on Android
+
+```bash
+npm run android
+```
+---
+## Run on iOS
+
+```bash
+npm run ios
+```
+---
+## Run on Web
+```bash
+npm run web
+```
+
+---
+
+#  Security Notes
+## Admin Access (Development Only)
+The project currently contains a hardcoded admin login for development and testing purposes:
+
+```txt
+Email: admin
+Password: admin
+```
+
+The admin panel includes elevated permissions such as:
+
+- User management
+- Data deletion
+- Content moderation
+
+---
+
+# Demo Mode
+Skill Swap supports a built-in demo mode.
+If Firebase credentials are missing:
+
+- The app still launches successfully
+- Demo data is loaded locally
+- Users can explore UI and app functionality without backend setup
+
+---
 
