@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Colors } from '../../src/constants/Colors';
 
 interface AvatarProps {
   initials: string;
+  imageUri?: string;
   size?: number;
   color?: string;
   // ring prop kept for API compat but not rendered in editorial v2
@@ -21,13 +22,21 @@ function getColor(initials: string): string {
   return AVATAR_COLORS[idx];
 }
 
-export default function Avatar({ initials, size = 42, color }: AvatarProps) {
+export default function Avatar({ initials, imageUri, size = 42, color }: AvatarProps) {
   const bg = color ?? getColor(initials);
   const fontSize = size * 0.36;
 
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
-      <Text style={[styles.text, { fontSize }]}>{initials}</Text>
+      {imageUri ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text style={[styles.text, { fontSize }]}>{initials}</Text>
+      )}
     </View>
   );
 }

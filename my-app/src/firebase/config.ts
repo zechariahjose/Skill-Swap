@@ -1,9 +1,8 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==============================
 // Firebase Config (.env values)
@@ -58,22 +57,7 @@ function initAuth() {
     return;
   }
 
-  try {
-    // RN path: initialize with AsyncStorage first to avoid memory-only auth.
-    _auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch (error: any) {
-    // On fast refresh, auth may already exist; reuse it.
-    if (error?.code === 'auth/already-initialized') {
-      _auth = getAuth(app);
-      return;
-    }
-
-    // Avoid crashing the app; auth features will gracefully fall back.
-    console.warn('Firebase Auth initialization failed:', error);
-    _auth = null;
-  }
+  _auth = getAuth(app);
 }
 
 export const getAuthInstance = (): Auth | null => {

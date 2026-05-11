@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
+import { router } from 'expo-router';
 import {
   Alert,
   FlatList,
@@ -80,7 +81,7 @@ export default function HomeScreen() {
   const sendSwapRequest = async (requestedSkill: Skill) => {
     if (!userProfile) return;
     try {
-      const mySkills    = await getSkillsByUser(userProfile.uid);
+      const mySkills     = await getSkillsByUser(userProfile.uid);
       const offeredSkill = mySkills.find((s) => s.type === 'offer');
       if (!offeredSkill) {
         Alert.alert('Add a skill first', 'Post at least one offered skill before requesting swaps.');
@@ -132,30 +133,44 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
 
-            {/* ── Greeting block ────────────────────────────────────── */}
-            <View style={styles.greetingBlock}>
+            {/* ── Top bar: greeting (left) + notification button (right) ── */}
+            <View style={styles.topBar}>
 
-              {/* Greeting badge — subtle pill */}
-              <View style={[styles.greetingBadge, { backgroundColor: colors.softSurface ?? colors.surface }]}>
-                <Ionicons name="sparkles" size={11} color={colors.muted} />
-                <Text style={[styles.greetingBadgeText, { color: colors.muted }]}>
-                  {getGreeting(firstName)}
+              {/* Left: badge + headline + subline stacked */}
+              <View style={styles.greetingBlock}>
+                <View style={[styles.greetingBadge, { backgroundColor: colors.softSurface ?? colors.surface }]}>
+                  <Ionicons name="sparkles" size={11} color={colors.muted} />
+                  <Text style={[styles.greetingBadgeText, { color: colors.muted }]}>
+                    {getGreeting(firstName)}
+                  </Text>
+                </View>
+
+                <Text style={styles.headline}>
+                  {'What will you\n'}
+                  <Text style={[styles.headlineAccent, { color: colors.accent ?? '#C8A882' }]}>learn</Text>
+                  {' today?'}
+                </Text>
+
+                <Text style={[styles.subHeadline, { color: colors.muted }]}>
+                  {filteredSkills.length > 0
+                    ? `${filteredSkills.length} skills available to swap`
+                    : 'Explore skills from your community'}
                 </Text>
               </View>
 
-              {/* Display headline */}
-              <Text style={styles.headline}>
-                {'What will you\n'}
-                <Text style={[styles.headlineAccent, { color: colors.accent ?? '#C8A882' }]}>learn</Text>
-                {' today?'}
-              </Text>
+              {/* Right: notification button — pinned to top-right, aligned with badge */}
+              <TouchableOpacity
+                onPress={() => router.push('/notifications')}
+                style={[styles.notificationButton, { backgroundColor: colors.softSurface ?? colors.surface }]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="notifications-outline" size={20} color={colors.ink} />
+                {/* Uncomment when you have an unread count: */}
+                {/* <View style={[styles.notificationBadge, { backgroundColor: colors.statusRed, borderColor: colors.background }]}>
+                  <Text style={styles.notificationBadgeText}>3</Text>
+                </View> */}
+              </TouchableOpacity>
 
-              {/* Subline — skill count or fallback */}
-              <Text style={[styles.subHeadline, { color: colors.muted }]}>
-                {filteredSkills.length > 0
-                  ? `${filteredSkills.length} skills available to swap`
-                  : 'Explore skills from your community'}
-              </Text>
             </View>
 
             {/* ── Search bar ────────────────────────────────────────── */}
@@ -187,7 +202,6 @@ export default function HomeScreen() {
                 >
                   {activeUsers.map((member, i) => (
                     <View key={member.initials + member.name + i} style={styles.personItem}>
-                      {/* Ring around avatar — accent tinted */}
                       <View style={[styles.avatarRing, { borderColor: colors.border }]}>
                         <Avatar initials={member.initials} size={44} />
                       </View>
@@ -316,24 +330,35 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       paddingBottom: 8,
     },
 
+    // ── Top bar ───────────────────────────────────────────────────────────
+    // Row: greeting block takes all remaining space (flex:1),
+    // notification button sits flush top-right aligned with the badge pill.
+
+    topBar: {
+      flexDirection:     'row',
+      alignItems:        'flex-start',   // both children anchor to top
+      paddingTop:        56,             // safe area + breathing room
+      paddingHorizontal: Theme.spacing.lg,
+      paddingBottom:     20,
+      gap:               12,
+    },
+
     // ── Greeting ──────────────────────────────────────────────────────────
 
     greetingBlock: {
-      paddingHorizontal: Theme.spacing.lg,
-      paddingTop:        56,
-      paddingBottom:     20,
-      gap:               0,
+      flex: 1,                           // takes all width except notification btn
+      gap:  0,
     },
 
     greetingBadge: {
-      flexDirection:  'row',
-      alignItems:     'center',
-      gap:            6,
-      alignSelf:      'flex-start',
-      borderRadius:   Theme.borderRadius.full,
+      flexDirection:     'row',
+      alignItems:        'center',
+      gap:               6,
+      alignSelf:         'flex-start',
+      borderRadius:      Theme.borderRadius.full,
       paddingHorizontal: 12,
       paddingVertical:   7,
-      marginBottom:   16,
+      marginBottom:      16,
     },
 
     greetingBadgeText: {
@@ -345,13 +370,13 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
     headline: {
       fontFamily:    'DMSerifDisplay_400Regular',
       fontSize:      34,
-      color:         colors.ink    ?? '#F0EBE3',
+      color:         colors.ink ?? '#F0EBE3',
       lineHeight:    42,
       letterSpacing: -0.8,
     },
 
     headlineAccent: {
-      // color applied inline from colors.accent
+      // color applied inline
     },
 
     subHeadline: {
@@ -359,6 +384,41 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       fontSize:   13,
       marginTop:  10,
       lineHeight: 20,
+    },
+
+    // ── Notification button ───────────────────────────────────────────────
+    // Sits at top of the row, vertically aligned with the greeting badge pill.
+    // No marginTop — topBar's paddingTop handles vertical placement.
+
+    notificationButton: {
+      width:          40,
+      height:         40,
+      borderRadius:   20,
+      alignItems:     'center',
+      justifyContent: 'center',
+      borderWidth:    1,
+      borderColor:    colors.border ?? '#2E2C2A',
+      // Matches greeting badge height (7+7 padding + 11 font ≈ 34px) — close enough
+      // to sit on the same optical line when alignItems:'flex-start' is on topBar.
+      marginTop:      20,
+    },
+
+    notificationBadge: {
+      position:     'absolute',
+      top:          -3,
+      right:        -3,
+      width:        18,
+      height:       18,
+      borderRadius: 9,
+      alignItems:   'center',
+      justifyContent: 'center',
+      borderWidth:  2,
+    },
+
+    notificationBadgeText: {
+      color:      'white',
+      fontSize:   9,
+      fontFamily: 'Nunito_700Bold',
     },
 
     // ── Search ────────────────────────────────────────────────────────────
@@ -384,7 +444,7 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
     // ── Active Today ──────────────────────────────────────────────────────
 
     section: {
-      paddingBottom:    20,
+      paddingBottom:     20,
       paddingHorizontal: Theme.spacing.lg,
     },
 

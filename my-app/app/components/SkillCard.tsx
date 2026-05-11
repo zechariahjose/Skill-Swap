@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 import { Skill, CATEGORIES } from '../../src/types';
@@ -9,18 +10,26 @@ interface SkillCardProps {
   onSwapPress?: (skill: Skill) => void;
   isOwn?: boolean;
   onDeletePress?: (id: string) => void;
+  showConnectButton?: boolean;
 }
 
-export default function SkillCard({ skill, onSwapPress, isOwn, onDeletePress }: SkillCardProps) {
+export default function SkillCard({ skill, onSwapPress, isOwn, onDeletePress, showConnectButton = true }: SkillCardProps) {
   const { colors } = useTheme();
+  const router = useRouter();
   const cat = CATEGORIES.find((c) => c.label === skill.category);
   const emoji = cat?.emoji ?? '✦';
   const isOffer = skill.type === 'offer';
 
+  const handleUserPress = () => {
+    router.push(`/user-profile?userId=${skill.userId}`);
+  };
+
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.nameRow}>
-        <Text style={[styles.userName, { color: colors.body }]}>{skill.userName}</Text>
+        <TouchableOpacity onPress={handleUserPress} activeOpacity={0.7}>
+          <Text style={[styles.userName, { color: colors.accent }]}>{skill.userName}</Text>
+        </TouchableOpacity>
         <View style={[styles.typePill, { backgroundColor: colors.softSurface }]}> 
           <Text style={[styles.typeText, { color: colors.body }]}>{isOffer ? 'Offering' : 'Looking for'}</Text>
         </View>

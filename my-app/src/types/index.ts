@@ -1,9 +1,45 @@
+export type AvailabilityStatus = 'available' | 'busy' | 'learning_only';
+
+export type PortfolioMediaType = 'image' | 'video' | 'link';
+
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  description?: string;
+  skillUsed?: string;
+  mediaType: PortfolioMediaType;
+  mediaUrl: string;
+  externalLink?: string;
+}
+
+export interface PortfolioLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface User {
   uid: string;
   name: string;
   bio: string;
+  location?: string;
   avatar?: string;
   initials: string;
+  createdAt: Date;
+  availabilityStatus?: AvailabilityStatus;
+  rating?: number;
+  totalSwaps?: number;
+  skillsOffered?: string[]; // skill IDs
+  skillsWanted?: string[]; // skill IDs
+  portfolioItems?: PortfolioItem[];
+  portfolioLinks?: PortfolioLink[];
+}
+
+export interface UserConnection {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'declined';
   createdAt: Date;
 }
  
@@ -36,6 +72,31 @@ export interface SwapRequest {
   status: SwapStatus;
   createdAt: Date;
   updatedAt?: Date;
+}
+
+export type NotificationType =
+  | 'connection_request'
+  | 'connection_accepted'
+  | 'connection_declined'
+  | 'swap_request'
+  | 'swap_accepted'
+  | 'swap_declined'
+  | 'swap_pending'
+  | 'swap_completed';
+
+export interface Notification {
+  id: string;
+  userId: string; // recipient
+  type: NotificationType;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserInitials: string;
+  title: string;
+  message: string;
+  swapRequestId?: string;
+  connectionId?: string;
+  read: boolean;
+  createdAt: Date;
 }
  
 export type Category =

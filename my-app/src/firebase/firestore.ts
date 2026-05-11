@@ -4,6 +4,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  setDoc,
   getDocs,
   getDoc,
   query,
@@ -15,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import { updateDemoProfile } from './auth';
-import { Skill, SwapRequest, SwapStatus, User } from '../types';
+import { Skill, SwapRequest, SwapStatus, User, UserConnection } from '../types';
 
 let demoSkills: Skill[] = [];
 let demoSwapRequests: SwapRequest[] = [];
@@ -23,13 +24,13 @@ const demoSkillListeners = new Set<(skills: Skill[]) => void>();
 
 // Helper function to convert Firestore Timestamps to Date objects
 function convertTimestamps<T extends Record<string, any>>(data: T): T {
-  const result = { ...data };
-  Object.keys(result).forEach(key => {
+  const result = { ...data } as Record<string, any>;
+  Object.keys(result).forEach((key) => {
     if (result[key] instanceof Timestamp) {
       result[key] = result[key].toDate();
     }
   });
-  return result;
+  return result as T;
 }
 
 function emitDemoSkills() {
@@ -54,7 +55,15 @@ export async function updateUserProfile(uid: string, data: Partial<User>) {
             .toUpperCase()
             .slice(0, 2)
         : undefined);
-    updateDemoProfile(uid, { name: nextName, bio: data.bio, initials: nextInitials });
+    updateDemoProfile(uid, {
+      name: nextName,
+      bio: data.bio,
+      location: data.location,
+      initials: nextInitials,
+      avatar: data.avatar ?? null,
+      portfolioItems: data.portfolioItems,
+      portfolioLinks: data.portfolioLinks,
+    });
     // Demo mode stores profile data on each skill/request snapshot only.
     demoSkills = demoSkills.map((s) =>
       s.userId === uid
@@ -296,6 +305,389 @@ export function subscribeToSwapRequests(
     unsubIn();
     unsubOut();
   };
+}
+
+// ─── USER CONNECTIONS ─────────────────────────────────────────────────────────
+
+export async function createConnection(fromUserId: string, toUserId: string) {
+  if (!isFirebaseConfigured || !db) {
+    // Demo mode doesn't support connections yet
+    return null;
+  }
+
+  const ref = await addDoc(collection(db, 'connections'), {
+    fromUserId,
+    toUserId,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateConnectionStatus(connectionId: string, status: 'accepted' | 'declined') {
+  if (!isFirebaseConfigured || !db) {
+    return;
+  }
+
+  await updateDoc(doc(db, 'connections', connectionId), { status, updatedAt: serverTimestamp() });
+}
+
+export async function getUserConnections(
+  userId: string
+): Promise<{ connections: UserConnection[]; pendingRequests: UserConnection[] }> {
+  if (!isFirebaseConfigured || !db) {
+    return { connections: [], pendingRequests: [] };
+  }
+
+  // Get accepted connections where user is either sender or receiver
+  const sentQ = query(
+    collection(db, 'connections'),
+    where('fromUserId', '==', userId),
+    where('status', '==', 'accepted')
+  );
+  const receivedQ = query(
+    collection(db, 'connections'),
+    where('toUserId', '==', userId),
+    where('status', '==', 'accepted')
+  );
+
+  // Get pending requests sent by user
+  const pendingSentQ = query(
+    collection(db, 'connections'),
+    where('fromUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
+
+  // Get pending requests received by user
+  const pendingReceivedQ = query(
+    collection(db, 'connections'),
+    where('toUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
+
+  const [sentSnap, receivedSnap, pendingSentSnap, pendingReceivedSnap] = await Promise.all([
+    getDocs(sentQ),
+    getDocs(receivedQ),
+    getDocs(pendingSentQ),
+    getDocs(pendingReceivedQ),
+  ]);
+
+  const connections: UserConnection[] = [
+    ...sentSnap.docs.map((d) => ({ id: d.id, ...convertTimestamps(d.data()) } as UserConnection)),
+    ...receivedSnap.docs.map((d) => ({ id: d.id, ...convertTimestamps(d.data()) } as UserConnection)),
+  ];
+
+  const pendingRequests: UserConnection[] = [
+    ...pendingSentSnap.docs.map((d) => ({ id: d.id, ...convertTimestamps(d.data()) } as UserConnection)),
+    ...pendingReceivedSnap.docs.map((d) => ({ id: d.id, ...convertTimestamps(d.data()) } as UserConnection)),
+  ];
+
+  return { connections, pendingRequests };
+}
+
+export async function getConnectionBetweenUsers(
+  userId1: string,
+  userId2: string
+): Promise<UserConnection | null> {
+  if (!isFirebaseConfigured || !db) {
+    return null;
+  }
+
+  const q1 = query(
+    collection(db, 'connections'),
+    where('fromUserId', '==', userId1),
+    where('toUserId', '==', userId2)
+  );
+  const q2 = query(
+    collection(db, 'connections'),
+    where('fromUserId', '==', userId2),
+    where('toUserId', '==', userId1)
+  );
+
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+  const connection = snap1.docs[0] || snap2.docs[0];
+  return connection ? ({ id: connection.id, ...convertTimestamps(connection.data()) } as UserConnection) : null;
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+export async function getNotificationsForUser(userId: string) {
+  if (!isFirebaseConfigured || !db) {
+    return [];
+  }
+
+  const clearedSnap = await getDoc(doc(db, 'notification_state', userId));
+  const clearedAt = clearedSnap.exists() ? convertTimestamps(clearedSnap.data() as any).clearedAt : null;
+  const clearedAtMs = clearedAt ? new Date(clearedAt).getTime() : 0;
+
+  const incomingSwapQ = query(
+    collection(db, 'swap_requests'),
+    where('toUserId', '==', userId)
+  );
+
+  const outgoingSwapQ = query(
+    collection(db, 'swap_requests'),
+    where('fromUserId', '==', userId)
+  );
+
+  const incomingConnectionQ = query(
+    collection(db, 'connections'),
+    where('toUserId', '==', userId),
+  );
+
+  const outgoingConnectionQ = query(
+    collection(db, 'connections'),
+    where('fromUserId', '==', userId),
+  );
+
+  const [incomingSwapSnap, outgoingSwapSnap, incomingConnSnap, outgoingConnSnap] = await Promise.all([
+    getDocs(incomingSwapQ),
+    getDocs(outgoingSwapQ),
+    getDocs(incomingConnectionQ),
+    getDocs(outgoingConnectionQ),
+  ]);
+
+  const notificationsById = new Map<string, any>();
+
+  const addNotification = (notification: any) => {
+    const createdAtMs = notification.createdAt ? new Date(notification.createdAt).getTime() : 0;
+    if (createdAtMs >= clearedAtMs) {
+      notificationsById.set(notification.id, notification);
+    }
+  };
+
+  incomingSwapSnap.docs.forEach((swapDoc) => {
+    const swap = convertTimestamps(swapDoc.data() as SwapRequest);
+    const createdAt = swap.updatedAt || swap.createdAt;
+
+    if (swap.status === 'pending') {
+      addNotification({
+        id: `swap_${swapDoc.id}`,
+        type: 'swap_request',
+        title: `${swap.fromUserName} wants to swap skills`,
+        message: `${swap.fromUserName} wants your ${swap.requestedSkillTitle} skill in exchange for their ${swap.offeredSkillTitle}`,
+        fromUserId: swap.fromUserId,
+        fromUserName: swap.fromUserName,
+        fromUserInitials: swap.fromUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+      return;
+    }
+
+    if (swap.status === 'accepted') {
+      addNotification({
+        id: `swap_${swapDoc.id}`,
+        type: 'swap_accepted',
+        title: `You accepted ${swap.fromUserName}'s swap request`,
+        message: `You accepted the swap: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.fromUserId,
+        fromUserName: swap.fromUserName,
+        fromUserInitials: swap.fromUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+      return;
+    }
+
+    if (swap.status === 'rejected') {
+      addNotification({
+        id: `swap_${swapDoc.id}`,
+        type: 'swap_declined',
+        title: `You declined ${swap.fromUserName}'s swap request`,
+        message: `You declined the swap: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.fromUserId,
+        fromUserName: swap.fromUserName,
+        fromUserInitials: swap.fromUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+      return;
+    }
+
+    if (swap.status === 'completed') {
+      addNotification({
+        id: `swap_${swapDoc.id}`,
+        type: 'swap_completed',
+        title: `Swap completed with ${swap.fromUserName}`,
+        message: `Great work! You completed the swap: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.fromUserId,
+        fromUserName: swap.fromUserName,
+        fromUserInitials: swap.fromUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+    }
+  });
+
+  outgoingSwapSnap.docs.forEach((swapDoc) => {
+    const swap = convertTimestamps(swapDoc.data() as SwapRequest);
+    if (swap.status === 'pending') return;
+
+    const createdAt = swap.updatedAt || swap.createdAt;
+
+    if (swap.status === 'accepted') {
+      addNotification({
+        id: `swap_out_${swapDoc.id}`,
+        type: 'swap_accepted',
+        title: `${swap.toUserName} accepted your swap request`,
+        message: `${swap.toUserName} accepted: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.toUserId,
+        fromUserName: swap.toUserName,
+        fromUserInitials: swap.toUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+      return;
+    }
+
+    if (swap.status === 'rejected') {
+      addNotification({
+        id: `swap_out_${swapDoc.id}`,
+        type: 'swap_declined',
+        title: `${swap.toUserName} declined your swap request`,
+        message: `${swap.toUserName} declined: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.toUserId,
+        fromUserName: swap.toUserName,
+        fromUserInitials: swap.toUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+      return;
+    }
+
+    if (swap.status === 'completed') {
+      addNotification({
+        id: `swap_out_${swapDoc.id}`,
+        type: 'swap_completed',
+        title: `Swap completed with ${swap.toUserName}`,
+        message: `Your swap is marked completed: ${swap.offeredSkillTitle} ↔ ${swap.requestedSkillTitle}`,
+        fromUserId: swap.toUserId,
+        fromUserName: swap.toUserName,
+        fromUserInitials: swap.toUserInitials,
+        swapRequestId: swapDoc.id,
+        createdAt,
+        read: false,
+      });
+    }
+  });
+
+  for (const connDoc of incomingConnSnap.docs) {
+    const conn = convertTimestamps(connDoc.data() as any);
+    const senderUser = await getUserById(conn.fromUserId);
+    const senderName = senderUser?.name || 'A user';
+    const senderInitials = senderUser?.initials || 'U';
+    const createdAt = conn.updatedAt || conn.createdAt;
+
+    if (conn.status === 'pending') {
+      addNotification({
+        id: `conn_${connDoc.id}`,
+        type: 'connection_request',
+        title: `${senderName} sent you a connection request`,
+        message: 'Connect to expand your network and unlock full profile access',
+        fromUserId: conn.fromUserId,
+        fromUserName: senderName,
+        fromUserInitials: senderInitials,
+        connectionId: connDoc.id,
+        createdAt,
+        read: false,
+      });
+      continue;
+    }
+
+    if (conn.status === 'accepted') {
+      addNotification({
+        id: `conn_${connDoc.id}`,
+        type: 'connection_accepted',
+        title: `You accepted ${senderName}'s connection request`,
+        message: `You're now connected with ${senderName}`,
+        fromUserId: conn.fromUserId,
+        fromUserName: senderName,
+        fromUserInitials: senderInitials,
+        connectionId: connDoc.id,
+        createdAt,
+        read: false,
+      });
+      continue;
+    }
+
+    if (conn.status === 'declined') {
+      addNotification({
+        id: `conn_${connDoc.id}`,
+        type: 'connection_declined',
+        title: `You declined ${senderName}'s connection request`,
+        message: `You declined the request from ${senderName}`,
+        fromUserId: conn.fromUserId,
+        fromUserName: senderName,
+        fromUserInitials: senderInitials,
+        connectionId: connDoc.id,
+        createdAt,
+        read: false,
+      });
+    }
+  }
+
+  for (const connDoc of outgoingConnSnap.docs) {
+    const conn = convertTimestamps(connDoc.data() as any);
+    if (conn.status === 'pending') continue;
+
+    const targetUser = await getUserById(conn.toUserId);
+    const targetName = targetUser?.name || 'A user';
+    const targetInitials = targetUser?.initials || 'U';
+    const createdAt = conn.updatedAt || conn.createdAt;
+
+    if (conn.status === 'accepted') {
+      addNotification({
+        id: `conn_out_${connDoc.id}`,
+        type: 'connection_accepted',
+        title: `${targetName} accepted your connection request`,
+        message: `You're now connected with ${targetName}`,
+        fromUserId: conn.toUserId,
+        fromUserName: targetName,
+        fromUserInitials: targetInitials,
+        connectionId: connDoc.id,
+        createdAt,
+        read: false,
+      });
+      continue;
+    }
+
+    if (conn.status === 'declined') {
+      addNotification({
+        id: `conn_out_${connDoc.id}`,
+        type: 'connection_declined',
+        title: `${targetName} declined your connection request`,
+        message: `${targetName} declined your connection request`,
+        fromUserId: conn.toUserId,
+        fromUserName: targetName,
+        fromUserInitials: targetInitials,
+        connectionId: connDoc.id,
+        createdAt,
+        read: false,
+      });
+    }
+  }
+
+  return Array.from(notificationsById.values()).sort((a, b) => {
+    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
+}
+
+export async function clearNotificationsForUser(userId: string) {
+  if (!isFirebaseConfigured || !db) {
+    return;
+  }
+
+  await setDoc(doc(db, 'notification_state', userId), { clearedAt: serverTimestamp() }, { merge: true });
 }
 
 // ─── ADMIN FUNCTIONS ──────────────────────────────────────────────────────────

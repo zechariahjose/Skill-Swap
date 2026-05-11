@@ -3,20 +3,31 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Linking,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import SkillCard from '../components/SkillCard';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { signOut } from '../../src/firebase/auth';
-import { deleteSkill, getSkillsByUser, updateUserProfile } from '../../src/firebase/firestore';
-import { Skill } from '../../src/types';
+import { changePassword, deleteCurrentAccount, signOut } from '../../src/firebase/auth';
+import {
+  deleteSkill,
+  getSkillsByUser,
+  getUserConnections,
+  subscribeToSwapRequests,
+  updateUserProfile,
+} from '../../src/firebase/firestore';
+import { PortfolioItem, PortfolioLink, Skill, SwapRequest } from '../../src/types';
+import { AvailabilityStatus } from '../../src/types';
 import ProfileDrawer from './ProfileDrawer';
 
 export default function ProfileScreen() {
@@ -24,7 +35,16 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const [name, setName]           = useState(userProfile?.name ?? '');
   const [bio, setBio]             = useState(userProfile?.bio  ?? '');
+  const [location, setLocation] = useState(userProfile?.location ?? '');
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(userProfile?.portfolioItems ?? []);
+  const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(userProfile?.portfolioLinks ?? []);
+  const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>(userProfile?.availabilityStatus ?? 'available');
   const [skills, setSkills]       = useState<Skill[]>([]);
+  const [networkStats, setNetworkStats] = useState({
+    connections: 0,
+    pending: 0,
+    completedSwaps: 0,
+  });
   const [saving, setSaving]       = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -39,18 +59,60 @@ export default function ProfileScreen() {
   useEffect(() => {
     setName(userProfile?.name ?? '');
     setBio(userProfile?.bio  ?? '');
+    setLocation(userProfile?.location ?? '');
+    setPortfolioItems(userProfile?.portfolioItems ?? []);
+    setPortfolioLinks(userProfile?.portfolioLinks ?? []);
+    setAvailabilityStatus(userProfile?.availabilityStatus ?? 'available');
     loadMySkills();
-  }, [userProfile?.uid, userProfile?.name, userProfile?.bio]);
+  }, [userProfile?.uid, userProfile?.name, userProfile?.bio, userProfile?.location, userProfile?.availabilityStatus]);
 
   useFocusEffect(
     useCallback(() => { loadMySkills(); }, [userProfile?.uid])
   );
 
+  useEffect(() => {
+    if (!userProfile) return;
+
+    let unsubscribeSwaps: (() => void) | undefined;
+
+    const loadNetworkStats = async () => {
+      try {
+        const { connections, pendingRequests } = await getUserConnections(userProfile.uid);
+        setNetworkStats((prev) => ({
+          ...prev,
+          connections: connections.length,
+          pending: pendingRequests.length,
+        }));
+      } catch (error) {
+        console.error('Error loading network stats:', error);
+      }
+    };
+
+    const countCompleted = (incoming: SwapRequest[], outgoing: SwapRequest[]) => {
+      const completed = [...incoming, ...outgoing].filter((request) => request.status === 'completed').length;
+      setNetworkStats((prev) => ({ ...prev, completedSwaps: completed }));
+    };
+
+    loadNetworkStats();
+    unsubscribeSwaps = subscribeToSwapRequests(userProfile.uid, countCompleted);
+
+    return () => {
+      if (unsubscribeSwaps) unsubscribeSwaps();
+    };
+  }, [userProfile?.uid]);
+
   const onSave = async () => {
     if (!userProfile) return;
     try {
       setSaving(true);
-      await updateUserProfile(userProfile.uid, { name: name.trim(), bio: bio.trim() });
+      await updateUserProfile(userProfile.uid, {
+        name: name.trim(),
+        bio: bio.trim(),
+        location: location.trim(),
+        portfolioItems,
+        portfolioLinks,
+        availabilityStatus
+      });
       await refreshProfile();
       setDrawerOpen(false);
       Alert.alert('Saved', 'Your profile has been updated.');
@@ -70,6 +132,60 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleChangePassword = async (value: string) => {
+    if (!value.trim()) return;
+    try {
+      await changePassword(value.trim());
+      Alert.alert('Password updated', 'Your password has been updated.');
+    } catch (error) {
+      Alert.alert('Password update failed', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission needed', 'Please allow gallery access to upload a profile photo.');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]?.uri && userProfile) {
+        await updateUserProfile(userProfile.uid, { avatar: result.assets[0].uri });
+        await refreshProfile();
+      }
+    } catch (error) {
+      Alert.alert('Upload failed', error instanceof Error ? error.message : 'Could not pick image.');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert('Delete account?', 'This action cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCurrentAccount();
+            Alert.alert('Account deleted');
+          } catch (error) {
+            Alert.alert('Delete failed', error instanceof Error ? error.message : 'Please try again.');
+          }
+        },
+      },
+    ]);
+  };
+
   if (!userProfile) {
     return (
       <View style={[styles.screen, styles.emptyScreen]}>
@@ -84,6 +200,21 @@ export default function ProfileScreen() {
 
   const offersCount = skills.filter((s) => s.type === 'offer').length;
   const needsCount  = skills.filter((s) => s.type === 'need').length;
+  const rating = userProfile.rating ?? 0;
+  const totalSwaps = userProfile.totalSwaps ?? networkStats.completedSwaps;
+
+  const availabilityMeta = (() => {
+    switch (userProfile.availabilityStatus) {
+      case 'available':
+        return { emoji: '🟢', label: 'Available to Swap', color: '#3F5A48' };
+      case 'busy':
+        return { emoji: '🟡', label: 'Busy', color: '#8A857C' };
+      case 'learning_only':
+        return { emoji: '🔴', label: 'Learning Only', color: '#6A4040' };
+      default:
+        return { emoji: '🟢', label: 'Available to Swap', color: '#3F5A48' };
+    }
+  })();
 
   return (
     <>
@@ -105,7 +236,7 @@ export default function ProfileScreen() {
                 style={styles.settingsBtn}
                 activeOpacity={0.8}
               >
-                <Text style={styles.settingsIcon}>⚙️</Text>
+                <Ionicons name="menu" size={22} color={colors.ink} />
               </TouchableOpacity>
             </View>
 
@@ -113,7 +244,7 @@ export default function ProfileScreen() {
             <View style={styles.heroCard}>
 
               {/* Avatar */}
-              <Avatar initials={userProfile.initials} size={76} />
+              <Avatar initials={userProfile.initials} imageUri={userProfile.avatar} size={76} />
 
               {/* Name + bio */}
               <View style={styles.nameBlock}>
@@ -123,6 +254,12 @@ export default function ProfileScreen() {
                 ) : (
                   <Text style={styles.profileBioEmpty}>No bio yet.</Text>
                 )}
+              </View>
+
+              <View style={[styles.availabilityBadge, { backgroundColor: availabilityMeta.color }]}>
+                <Text style={styles.availabilityText}>
+                  {availabilityMeta.emoji} {availabilityMeta.label}
+                </Text>
               </View>
 
               {/* Divider */}
@@ -152,7 +289,123 @@ export default function ProfileScreen() {
 
             </View>
 
-            {/* ── Section label ───────────────────────────────────────── */}
+            <View style={styles.upgradeGrid}>
+              <View style={styles.upgradeCard}>
+                <View style={styles.upgradeLabelRow}>
+                  <Ionicons name="people" size={16} color={colors.accent} />
+                  <Text style={styles.upgradeLabel}>Connections</Text>
+                </View>
+                <Text style={styles.upgradeValue}>{networkStats.connections}</Text>
+              </View>
+
+              <View style={styles.upgradeCard}>
+                <View style={styles.upgradeLabelRow}>
+                  <Ionicons name="person-add" size={16} color={colors.accent} />
+                  <Text style={styles.upgradeLabel}>Pending Requests</Text>
+                </View>
+                <Text style={styles.upgradeValue}>{networkStats.pending}</Text>
+              </View>
+            </View>
+
+            <View style={styles.upgradeGrid}>
+              <View style={styles.upgradeCard}>
+                <View style={styles.upgradeLabelRow}>
+                  <Ionicons name="star" size={16} color="#FFD700" />
+                  <Text style={styles.upgradeLabel}>Rating</Text>
+                </View>
+                <Text style={styles.upgradeValue}>{rating > 0 ? rating.toFixed(1) : 'N/A'}</Text>
+              </View>
+
+              <View style={styles.upgradeCard}>
+                <View style={styles.upgradeLabelRow}>
+                  <Ionicons name="repeat" size={16} color={colors.accent} />
+                  <Text style={styles.upgradeLabel}>Completed Swaps</Text>
+                </View>
+                <Text style={styles.upgradeValue}>{totalSwaps}</Text>
+              </View>
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>ABOUT</Text>
+            </View>
+            <View style={styles.cardPad}>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardText}>
+                  {userProfile.bio?.trim() ? userProfile.bio : 'Tell others what you are passionate about and what you enjoy teaching.'}
+                </Text>
+                <Text style={[styles.infoCardText, { marginTop: 8 }]}>📍 {userProfile.location?.trim() || 'Location not set'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>PORTFOLIO</Text>
+            </View>
+            {portfolioItems.length > 0 ? (
+              <FlatList
+                horizontal
+                data={portfolioItems}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.portfolioRow}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    style={styles.portfolioCard}
+                    onPress={() => {
+                      const target = item.externalLink || item.mediaUrl;
+                      if (target) Linking.openURL(target);
+                    }}
+                  >
+                    <View style={styles.portfolioBadge}>
+                      <Text style={styles.portfolioBadgeText}>{item.mediaType.toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.portfolioTitle}>{item.title}</Text>
+                    <Text style={styles.portfolioMeta}>{item.skillUsed || 'General skill'}</Text>
+                    <Text style={styles.portfolioDescription} numberOfLines={2}>
+                      {item.description || item.mediaUrl}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              <View style={styles.cardPad}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoCardText}>Add portfolio items from Settings to showcase your work.</Text>
+                </View>
+              </View>
+            )}
+
+            {portfolioLinks.length > 0 && (
+              <View style={styles.cardPad}>
+                <View style={styles.infoCard}>
+                  {portfolioLinks.map((link) => (
+                    <TouchableOpacity key={link.id} onPress={() => Linking.openURL(link.url)} style={styles.linkRow}>
+                      <Text style={styles.linkEmoji}>🔗</Text>
+                      <Text style={styles.linkText}>{link.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>REVIEWS</Text>
+            </View>
+            <View style={styles.cardPad}>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardText}>Rating: {rating > 0 ? rating.toFixed(1) : 'N/A'} · Completed swaps: {totalSwaps}</Text>
+              </View>
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>AVAILABILITY</Text>
+            </View>
+            <View style={styles.cardPad}>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardText}>{availabilityMeta.emoji} {availabilityMeta.label}</Text>
+              </View>
+            </View>
+
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionLabel}>YOUR SKILLS</Text>
               <Text style={styles.sectionCount}>{skills.length}</Text>
@@ -197,10 +450,21 @@ export default function ProfileScreen() {
         onClose={() => setDrawerOpen(false)}
         name={name}
         bio={bio}
+        location={location}
+        portfolioItems={portfolioItems}
+        portfolioLinks={portfolioLinks}
+        availabilityStatus={availabilityStatus}
         onNameChange={setName}
         onBioChange={setBio}
+        onLocationChange={setLocation}
+        onPickAvatar={handlePickAvatar}
+        onPortfolioItemsChange={setPortfolioItems}
+        onPortfolioLinksChange={setPortfolioLinks}
+        onAvailabilityChange={setAvailabilityStatus}
         onSave={onSave}
         saving={saving}
+        onChangePassword={handleChangePassword}
+        onDeleteAccount={handleDeleteAccount}
         onSignOut={() => signOut()}
       />
     </>
@@ -255,10 +519,6 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       justifyContent:  'center',
     },
 
-    settingsIcon: {
-      fontSize: 18,
-    },
-
     // ── Hero card ────────────────────────────────────────────────────────────
 
     heroCard: {
@@ -308,6 +568,18 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       fontSize:   14,
       color:      colors.border  ?? '#2E2C2A',
       fontStyle:  'italic',
+    },
+    availabilityBadge: {
+      marginTop: 4,
+      marginBottom: Theme.spacing.sm,
+      paddingHorizontal: Theme.spacing.md,
+      paddingVertical: Theme.spacing.xs,
+      borderRadius: Theme.borderRadius.full,
+    },
+    availabilityText: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize: Theme.fontSize.small,
+      color: 'white',
     },
 
     // Full-width divider inside the card
@@ -378,11 +650,118 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       fontSize:   12,
       color:      colors.muted ?? '#6B6760',
     },
+    upgradeGrid: {
+      paddingHorizontal: Theme.spacing.lg,
+      marginTop: Theme.spacing.md,
+      flexDirection: 'row',
+      gap: Theme.spacing.md,
+    },
+    upgradeCard: {
+      flex: 1,
+      borderRadius: Theme.borderRadius.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: Theme.spacing.md,
+      paddingVertical: Theme.spacing.md,
+      ...Theme.shadow.card,
+    },
+    upgradeLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Theme.spacing.xs,
+      marginBottom: Theme.spacing.xs,
+    },
+    upgradeLabel: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize: 11,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      color: colors.muted,
+    },
+    upgradeValue: {
+      fontFamily: 'DMSerifDisplay_400Regular',
+      fontSize: 24,
+      color: colors.ink,
+    },
 
     // ── Cards ────────────────────────────────────────────────────────────────
 
     cardPad: {
       paddingHorizontal: Theme.spacing.lg,
+    },
+    infoCard: {
+      borderRadius: Theme.borderRadius.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: Theme.spacing.md,
+      ...Theme.shadow.card,
+    },
+    infoCardText: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize: Theme.fontSize.small,
+      color: colors.body,
+      lineHeight: 20,
+    },
+    portfolioRow: {
+      paddingHorizontal: Theme.spacing.lg,
+      gap: Theme.spacing.md,
+      paddingBottom: Theme.spacing.xs,
+    },
+    portfolioCard: {
+      width: 230,
+      borderRadius: Theme.borderRadius.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: Theme.spacing.md,
+      ...Theme.shadow.card,
+    },
+    portfolioBadge: {
+      alignSelf: 'flex-start',
+      borderRadius: Theme.borderRadius.full,
+      backgroundColor: colors.softSurface,
+      paddingHorizontal: Theme.spacing.sm,
+      paddingVertical: 4,
+      marginBottom: Theme.spacing.xs,
+    },
+    portfolioBadgeText: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize: 10,
+      color: colors.muted,
+    },
+    portfolioTitle: {
+      fontFamily: 'DMSerifDisplay_400Regular',
+      fontSize: 20,
+      color: colors.ink,
+    },
+    portfolioMeta: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize: 11,
+      color: colors.muted,
+      marginTop: 2,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    portfolioDescription: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize: Theme.fontSize.small,
+      color: colors.body,
+    },
+    linkRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Theme.spacing.sm,
+      paddingVertical: 4,
+    },
+    linkEmoji: {
+      fontSize: 14,
+    },
+    linkText: {
+      fontFamily: 'Nunito_700Bold',
+      fontSize: Theme.fontSize.small,
+      color: colors.accent,
     },
 
     // ── Footer ───────────────────────────────────────────────────────────────

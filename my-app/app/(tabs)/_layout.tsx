@@ -33,10 +33,11 @@ type FloatingTabBarProps = {
 
 function getIcon(routeName: string, focused: boolean): keyof typeof Ionicons.glyphMap {
   const map: Record<string, [string, string]> = {
-    home:     ['compass',         'compass-outline'],
-    requests: ['swap-horizontal', 'swap-horizontal-outline'],
-    create:   ['add',             'add'],
-    profile:  ['person',          'person-outline'],
+    home:        ['compass',         'compass-outline'],
+    requests:    ['swap-horizontal', 'swap-horizontal-outline'],
+    connections: ['people',          'people-outline'],
+    create:      ['add',             'add'],
+    profile:     ['person',          'person-outline'],
   };
   const [active, inactive] = map[routeName] ?? ['ellipse', 'ellipse-outline'];
   return (focused ? active : inactive) as keyof typeof Ionicons.glyphMap;
@@ -189,7 +190,7 @@ function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
   const { colors, themeMode } = useTheme();
 
   const visibleRoutes = state.routes.filter(route =>
-    ['home', 'requests', 'create', 'profile'].includes(route.name)
+    ['home', 'requests', 'connections', 'create', 'profile'].includes(route.name)
   );
 
   return (
@@ -283,10 +284,11 @@ export default function TabsLayout() {
       tabBar={(props) => <FloatingTabBar {...(props as unknown as FloatingTabBarProps)} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="home"     />
-      <Tabs.Screen name="requests" />
-      <Tabs.Screen name="create"   />
-      <Tabs.Screen name="profile"  />
+      <Tabs.Screen name="home"        />
+      <Tabs.Screen name="requests"    />
+      <Tabs.Screen name="connections" />
+      <Tabs.Screen name="create"      />
+      <Tabs.Screen name="profile"     />
     </Tabs>
   );
 }
