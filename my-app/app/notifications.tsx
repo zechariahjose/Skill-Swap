@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -335,7 +335,7 @@ export default function NotificationsScreen() {
   }, [userProfile?.uid]);
 
   // Load on mount and when uid changes
-  useMemo(() => { loadNotifications(); }, [loadNotifications]);
+  useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

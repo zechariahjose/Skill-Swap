@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import EmptyState from '../components/EmptyState';
 import SwapRequestCard from '../components/SwapRequestCard';
 import { Theme } from '../../src/constants/Theme';
@@ -16,6 +16,7 @@ export default function RequestsScreen() {
   const [incoming, setIncoming] = useState<SwapRequest[]>([]);
   const [outgoing, setOutgoing] = useState<SwapRequest[]>([]);
   const [mode, setMode] = useState<ViewMode>('incoming');
+  const [refreshing, setRefreshing] = useState(false);
 
   const styles = getStyles(colors);
 
@@ -24,9 +25,17 @@ export default function RequestsScreen() {
     const unsubscribe = subscribeToSwapRequests(userProfile.uid, (newIncoming, newOutgoing) => {
       setIncoming(newIncoming);
       setOutgoing(newOutgoing);
+      setRefreshing(false);
     });
     return unsubscribe;
   }, [userProfile]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    // subscribeToSwapRequests will call back and set refreshing false
+    // but as a safety net, reset after 2s
+    setTimeout(() => setRefreshing(false), 2000);
+  };
 
   const data = mode === 'incoming' ? incoming : outgoing;
 
@@ -84,6 +93,13 @@ export default function RequestsScreen() {
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent}
+            />
+          }
         />
       )}
     </View>

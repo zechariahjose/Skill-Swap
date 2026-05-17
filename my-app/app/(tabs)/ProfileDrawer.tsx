@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
-import { AvailabilityStatus, PortfolioItem, PortfolioLink, PortfolioMediaType } from '../../src/types';
+import { AvailabilityStatus, PortfolioItem, PortfolioLink } from '../../src/types';
 
 type DrawerTab = 'profile' | 'portfolio' | 'account' | 'settings';
 
@@ -69,7 +69,6 @@ export default function ProfileDrawer({
   const [itemTitle, setItemTitle] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [itemSkill, setItemSkill] = useState('');
-  const [itemMediaType, setItemMediaType] = useState<PortfolioMediaType>('image');
   const [itemMediaUrl, setItemMediaUrl] = useState('');
   const [itemExternalLink, setItemExternalLink] = useState('');
   const [linkLabel, setLinkLabel] = useState('');
@@ -102,7 +101,7 @@ export default function ProfileDrawer({
       title: itemTitle.trim(),
       description: itemDescription.trim(),
       skillUsed: itemSkill.trim(),
-      mediaType: itemMediaType,
+      mediaType: 'link',
       mediaUrl: itemMediaUrl.trim(),
       externalLink: itemExternalLink.trim() || undefined,
     };
@@ -241,18 +240,6 @@ export default function ProfileDrawer({
           {activeTab === 'portfolio' && (
             <View style={styles.section}>
               <Text style={[styles.sectionLabel, { color: colors.muted }]}>PORTFOLIO ITEMS</Text>
-
-              <View style={styles.row}>
-                {(['image', 'video', 'link'] as const).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setItemMediaType(type)}
-                    style={[styles.typeBtn, { borderColor: itemMediaType === type ? colors.accent : colors.border, backgroundColor: itemMediaType === type ? colors.accentSurface : colors.surface2 }]}
-                  >
-                    <Text style={[styles.typeBtnText, { color: itemMediaType === type ? colors.accent : colors.muted }]}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               <View style={[styles.inputCard, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
                 <Text style={[styles.inputFloatLabel, { color: colors.muted }]}>TITLE</Text>

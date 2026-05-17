@@ -5,6 +5,7 @@ import {
   FlatList,
   Linking,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   });
   const [saving, setSaving]       = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const styles = getStyles(colors);
 
@@ -54,6 +56,16 @@ export default function ProfileScreen() {
     if (!userProfile) return;
     const data = await getSkillsByUser(userProfile.uid);
     setSkills(data);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshProfile();
+      await loadMySkills();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -176,6 +188,7 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
+            setDrawerOpen(false);
             await deleteCurrentAccount();
             Alert.alert('Account deleted');
           } catch (error) {
@@ -224,6 +237,13 @@ export default function ProfileScreen() {
         data={skills}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent}
+          />
+        }
 
         ListHeaderComponent={
           <View>
@@ -465,7 +485,7 @@ export default function ProfileScreen() {
         saving={saving}
         onChangePassword={handleChangePassword}
         onDeleteAccount={handleDeleteAccount}
-        onSignOut={() => signOut()}
+        onSignOut={() => { setDrawerOpen(false); signOut(); }}
       />
     </>
   );

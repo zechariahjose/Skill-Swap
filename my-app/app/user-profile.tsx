@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,6 +36,7 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected'>('none');
   const [isCurrentUser, setIsCurrentUser] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const styles = getStyles(colors);
 
@@ -84,6 +86,7 @@ export default function UserProfileScreen() {
       Alert.alert('Error', 'Failed to load user profile');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -140,7 +143,17 @@ export default function UserProfileScreen() {
     : null;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { setRefreshing(true); loadUserProfile(); }}
+          tintColor={colors.accent}
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

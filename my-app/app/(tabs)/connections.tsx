@@ -137,7 +137,7 @@ function ConnectionCard({
         ) : (
           <TouchableOpacity
             style={styles.viewProfileButton}
-            onPress={() => router.push(`/user-profile?userId=${user.id}`)}
+            onPress={() => router.push(`/user-profile?userId=${user.uid}`)}
             accessibilityRole="button"
             accessibilityLabel={`View ${user.name}'s profile`}
           >
