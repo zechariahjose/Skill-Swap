@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,15 +20,17 @@ import {
   getAllSkills,
   getAllSwapRequests,
   getAllUsers,
+  getAllConnections,
+  deleteConnection,
 } from '../src/firebase/firestore';
-import { Skill, SwapRequest, User } from '../src/types';
+import { Skill, SwapRequest, User, UserConnection } from '../src/types';
 
 // SECURITY WARNING: This admin panel is currently accessible via hardcoded
 // credentials in login.tsx. This is a DEVELOPMENT/TESTING feature only.
 // REMOVE or SECURE this functionality before production deployment.
 // ⚠️  DEVELOPMENT ONLY — remove or gate behind a real auth check before production.
 
-type Tab = 'users' | 'skills' | 'requests';
+type Tab = 'users' | 'skills' | 'requests' | 'connections';
 
 const STATUS_COLOR: Record<string, string> = {
   pending:   '#C8A882',
@@ -39,23 +40,26 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function AdminScreen() {
-  const [users,     setUsers]     = useState<User[]>([]);
-  const [skills,    setSkills]    = useState<Skill[]>([]);
-  const [requests,  setRequests]  = useState<SwapRequest[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [refreshing,setRefreshing]= useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('users');
+  const [users,       setUsers]       = useState<User[]>([]);
+  const [skills,      setSkills]      = useState<Skill[]>([]);
+  const [requests,    setRequests]    = useState<SwapRequest[]>([]);
+  const [connections, setConnections] = useState<UserConnection[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [activeTab,   setActiveTab]   = useState<Tab>('users');
 
   const loadData = async () => {
     try {
-      const [u, s, r] = await Promise.all([
+      const [u, s, r, c] = await Promise.all([
         getAllUsers(),
         getAllSkills(),
         getAllSwapRequests(),
+        getAllConnections(),
       ]);
       setUsers(u);
       setSkills(s);
       setRequests(r);
+      setConnections(c);
     } catch {
       Alert.alert('Error', 'Failed to load data');
     } finally {
@@ -125,11 +129,29 @@ export default function AdminScreen() {
     ]);
   };
 
+  const handleDeleteConnection = (conn: UserConnection) => {
+    Alert.alert('Delete Connection', 'Remove this connection?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteConnection(conn.id);
+            setConnections(prev => prev.filter(c => c.id !== conn.id));
+          } catch { Alert.alert('Error', 'Failed to delete connection'); }
+        },
+      },
+    ]);
+  };
+
   // ── Derived stats ─────────────────────────────────────────────────────────
 
   const pending   = requests.filter(r => r.status === 'pending').length;
   const accepted  = requests.filter(r => r.status === 'accepted').length;
   const rejected  = requests.filter(r => r.status === 'rejected').length;
+  const completed = requests.filter(r => r.status === 'completed').length;
+  const connAccepted = connections.filter(c => c.status === 'accepted').length;
+  const connPending  = connections.filter(c => c.status === 'pending').length;
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
@@ -138,17 +160,33 @@ export default function AdminScreen() {
       ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
       : null;
     const userSkillCount = skills.filter(s => s.userId === item.uid).length;
+    const availColor = item.availabilityStatus === 'available' ? '#3F5A48'
+      : item.availabilityStatus === 'busy' ? '#8A857C'
+      : item.availabilityStatus === 'learning_only' ? '#6A4040'
+      : Colors.muted;
 
     return (
       <View style={styles.item}>
         <Avatar initials={item.initials ?? item.name?.[0] ?? '?'} size={40} />
         <View style={styles.itemBody}>
-          <Text style={styles.itemTitle}>{item.name}</Text>
+          <View style={styles.itemTitleRow}>
+            <Text style={styles.itemTitle}>{item.name}</Text>
+            {item.availabilityStatus && (
+              <View style={[styles.availDot, { backgroundColor: availColor }]} />
+            )}
+          </View>
           {item.bio ? (
             <Text style={styles.itemSub} numberOfLines={1}>{item.bio}</Text>
           ) : null}
           <View style={styles.itemMetaRow}>
             <Text style={styles.itemMeta}>{userSkillCount} skill{userSkillCount !== 1 ? 's' : ''}</Text>
+            {(item as any).rating ? (
+              <>
+                <Text style={styles.itemMetaDot}>·</Text>
+                <Ionicons name="star" size={10} color="#F5C842" />
+                <Text style={styles.itemMeta}>{(item as any).rating.toFixed(1)}</Text>
+              </>
+            ) : null}
             {joined && <Text style={styles.itemMetaDot}>·</Text>}
             {joined && <Text style={styles.itemMeta}>joined {joined}</Text>}
           </View>
@@ -220,19 +258,54 @@ export default function AdminScreen() {
     );
   };
 
+  const renderConnection = ({ item }: { item: UserConnection }) => {
+    const fromUser = users.find(u => u.uid === item.fromUserId);
+    const toUser   = users.find(u => u.uid === item.toUserId);
+    const date = item.createdAt
+      ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : null;
+    const statusColor = item.status === 'accepted' ? '#3D6B50'
+      : item.status === 'pending' ? '#C8A882'
+      : '#8B4444';
+
+    return (
+      <View style={styles.item}>
+        <View style={styles.itemBody}>
+          <View style={styles.swapRoute}>
+            <Text style={styles.swapName}>{fromUser?.name ?? item.fromUserId.slice(0, 8)}</Text>
+            <Ionicons name="arrow-forward" size={12} color={Colors.muted} style={styles.swapArrow} />
+            <Text style={styles.swapName}>{toUser?.name ?? item.toUserId.slice(0, 8)}</Text>
+          </View>
+          <View style={styles.itemMetaRow}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+            {date && <Text style={styles.itemMetaDot}>·</Text>}
+            {date && <Text style={styles.itemMeta}>{date}</Text>}
+          </View>
+        </View>
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteConnection(item)} activeOpacity={0.7}>
+          <Ionicons name="trash-outline" size={17} color="#8B4444" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   // ── Active list data ───────────────────────────────────────────────────────
 
-  const listData  = activeTab === 'users'    ? users
-                  : activeTab === 'skills'   ? skills
-                  : requests;
+  const listData  = activeTab === 'users'       ? users
+                  : activeTab === 'skills'      ? skills
+                  : activeTab === 'requests'    ? requests
+                  : connections;
 
-  const listKey   = activeTab === 'users'    ? (i: User)        => i.uid
-                  : activeTab === 'skills'   ? (i: Skill)       => i.id
-                  : (i: SwapRequest) => i.id;
+  const listKey   = activeTab === 'users'       ? (i: User)           => i.uid
+                  : activeTab === 'skills'      ? (i: Skill)          => i.id
+                  : activeTab === 'requests'    ? (i: SwapRequest)    => i.id
+                  : (i: UserConnection) => i.id;
 
-  const renderRow = activeTab === 'users'    ? renderUser
-                  : activeTab === 'skills'   ? renderSkill
-                  : renderRequest;
+  const renderRow = activeTab === 'users'       ? renderUser
+                  : activeTab === 'skills'      ? renderSkill
+                  : activeTab === 'requests'    ? renderRequest
+                  : renderConnection;
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -285,16 +358,23 @@ export default function AdminScreen() {
 
               {/* Primary stat row */}
               <View style={styles.statRow}>
-                <StatCard label="USERS"  value={users.length}    />
-                <StatCard label="SKILLS" value={skills.length}   />
-                <StatCard label="SWAPS"  value={requests.length} />
+                <StatCard label="USERS"       value={users.length}       />
+                <StatCard label="SKILLS"      value={skills.length}      />
+                <StatCard label="CONNECTIONS" value={connections.length} />
               </View>
 
               {/* Swap status row */}
               <View style={styles.statRow}>
-                <StatusCard label="PENDING"  value={pending}  color="#C8A882" bg="#2A2420" border="#C8A882" />
-                <StatusCard label="ACCEPTED" value={accepted} color="#3D6B50" bg="#1C2820" border="#3D6B50" />
-                <StatusCard label="REJECTED" value={rejected} color="#8B4444" bg="#1C1010" border="#8B4444" />
+                <StatusCard label="PENDING"   value={pending}   color="#C8A882" bg="#2A2420" border="#C8A882" />
+                <StatusCard label="ACCEPTED"  value={accepted}  color="#3D6B50" bg="#1C2820" border="#3D6B50" />
+                <StatusCard label="COMPLETED" value={completed} color="#9AA8C4" bg="#1A1C20" border="#9AA8C4" />
+                <StatusCard label="DECLINED"  value={rejected}  color="#8B4444" bg="#1C1010" border="#8B4444" />
+              </View>
+
+              {/* Connection status row */}
+              <View style={styles.statRow}>
+                <StatusCard label="CONN. ACTIVE"  value={connAccepted} color="#3D6B50" bg="#1C2820" border="#3D6B50" />
+                <StatusCard label="CONN. PENDING" value={connPending}  color="#C8A882" bg="#2A2420" border="#C8A882" />
               </View>
             </View>
 
@@ -302,8 +382,11 @@ export default function AdminScreen() {
 
             {/* ── Tab bar ───────────────────────────────────────────── */}
             <View style={styles.tabTrack}>
-              {(['users', 'skills', 'requests'] as Tab[]).map((tab) => {
-                const count = tab === 'users' ? users.length : tab === 'skills' ? skills.length : requests.length;
+              {(['users', 'skills', 'requests', 'connections'] as Tab[]).map((tab) => {
+                const count = tab === 'users' ? users.length
+                  : tab === 'skills' ? skills.length
+                  : tab === 'requests' ? requests.length
+                  : connections.length;
                 const isActive = activeTab === tab;
                 return (
                   <TouchableOpacity
@@ -313,7 +396,7 @@ export default function AdminScreen() {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === 'connections' ? 'Conns' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                     </Text>
                     <View style={[styles.tabCount, isActive && styles.tabCountActive]}>
                       <Text style={[styles.tabCountText, isActive && styles.tabCountTextActive]}>
@@ -558,11 +641,23 @@ const styles = StyleSheet.create({
     gap:  3,
   },
 
+  itemTitleRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           6,
+  },
+
   itemTitle: {
     fontFamily:    'DMSerifDisplay_400Regular',
     fontSize:      16,
     color:         Colors.ink  ?? '#F0EBE3',
     letterSpacing: -0.2,
+  },
+
+  availDot: {
+    width:        7,
+    height:       7,
+    borderRadius: 3.5,
   },
 
   itemSub: {

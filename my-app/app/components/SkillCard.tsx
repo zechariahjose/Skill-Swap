@@ -21,7 +21,7 @@ export default function SkillCard({ skill, onSwapPress, isOwn, onDeletePress, sh
   const isOffer = skill.type === 'offer';
 
   const handleUserPress = () => {
-    router.push(`/user-profile?userId=${skill.userId}`);
+    router.push({ pathname: '/user-profile', params: { userId: skill.userId } });
   };
 
   return (

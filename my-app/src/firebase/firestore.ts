@@ -22,7 +22,6 @@ let demoSkills: Skill[] = [];
 let demoSwapRequests: SwapRequest[] = [];
 const demoSkillListeners = new Set<(skills: Skill[]) => void>();
 
-// Helper function to convert Firestore Timestamps to Date objects
 function convertTimestamps<T extends Record<string, any>>(data: T): T {
   const result = { ...data } as Record<string, any>;
   Object.keys(result).forEach((key) => {
@@ -64,7 +63,6 @@ export async function updateUserProfile(uid: string, data: Partial<User>) {
       portfolioItems: data.portfolioItems,
       portfolioLinks: data.portfolioLinks,
     });
-    // Demo mode stores profile data on each skill/request snapshot only.
     demoSkills = demoSkills.map((s) =>
       s.userId === uid
         ? {
@@ -111,6 +109,47 @@ export async function getUserById(uid: string): Promise<User | null> {
 
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? convertTimestamps({ uid: snap.id, ...snap.data() } as User) : null;
+}
+
+/**
+ * Submit a rating for a user after a completed swap.
+ * Calculates a rolling average from ratingCount + rating fields.
+ */
+export async function rateUser(
+  raterUserId: string,
+  ratedUserId: string,
+  swapRequestId: string,
+  stars: number
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) return;
+
+  // Guard: check if this user already rated this swap
+  const swapRef = doc(db, 'swap_requests', swapRequestId);
+  const swapSnap = await getDoc(swapRef);
+  if (swapSnap.exists() && swapSnap.data()[`ratedBy_${raterUserId}`] === true) {
+    return; // already rated, do nothing
+  }
+
+  const userRef = doc(db, 'users', ratedUserId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) return;
+
+  const data = userSnap.data() as User & { ratingCount?: number };
+  const prevRating = data.rating ?? 0;
+  const prevCount = data.ratingCount ?? 0;
+  const newCount = prevCount + 1;
+  const newRating = (prevRating * prevCount + stars) / newCount;
+
+  await updateDoc(userRef, {
+    rating: Math.round(newRating * 10) / 10,
+    ratingCount: newCount,
+    totalSwaps: (data.totalSwaps ?? 0) + 1,
+  });
+
+  // Mark the swap as rated by the rater (not the person being rated)
+  await updateDoc(swapRef, {
+    [`ratedBy_${raterUserId}`]: true,
+  });
 }
 
 // ─── SKILLS ───────────────────────────────────────────────────────────────────
@@ -259,13 +298,11 @@ export function subscribeToSwapRequests(
     return () => clearInterval(interval);
   }
 
-  // Subscribe to incoming
   const inQ = query(
     collection(db, 'swap_requests'),
     where('toUserId', '==', userId),
     orderBy('createdAt', 'desc')
   );
-  // Subscribe to outgoing
   const outQ = query(
     collection(db, 'swap_requests'),
     where('fromUserId', '==', userId),
@@ -311,7 +348,6 @@ export function subscribeToSwapRequests(
 
 export async function createConnection(fromUserId: string, toUserId: string) {
   if (!isFirebaseConfigured || !db) {
-    // Demo mode doesn't support connections yet
     return null;
   }
 
@@ -339,7 +375,6 @@ export async function getUserConnections(
     return { connections: [], pendingRequests: [] };
   }
 
-  // Get accepted connections where user is either sender or receiver
   const sentQ = query(
     collection(db, 'connections'),
     where('fromUserId', '==', userId),
@@ -350,15 +385,11 @@ export async function getUserConnections(
     where('toUserId', '==', userId),
     where('status', '==', 'accepted')
   );
-
-  // Get pending requests sent by user
   const pendingSentQ = query(
     collection(db, 'connections'),
     where('fromUserId', '==', userId),
     where('status', '==', 'pending')
   );
-
-  // Get pending requests received by user
   const pendingReceivedQ = query(
     collection(db, 'connections'),
     where('toUserId', '==', userId),
@@ -421,25 +452,10 @@ export async function getNotificationsForUser(userId: string) {
   const clearedAt = clearedSnap.exists() ? convertTimestamps(clearedSnap.data() as any).clearedAt : null;
   const clearedAtMs = clearedAt ? new Date(clearedAt).getTime() : 0;
 
-  const incomingSwapQ = query(
-    collection(db, 'swap_requests'),
-    where('toUserId', '==', userId)
-  );
-
-  const outgoingSwapQ = query(
-    collection(db, 'swap_requests'),
-    where('fromUserId', '==', userId)
-  );
-
-  const incomingConnectionQ = query(
-    collection(db, 'connections'),
-    where('toUserId', '==', userId),
-  );
-
-  const outgoingConnectionQ = query(
-    collection(db, 'connections'),
-    where('fromUserId', '==', userId),
-  );
+  const incomingSwapQ = query(collection(db, 'swap_requests'), where('toUserId', '==', userId));
+  const outgoingSwapQ = query(collection(db, 'swap_requests'), where('fromUserId', '==', userId));
+  const incomingConnectionQ = query(collection(db, 'connections'), where('toUserId', '==', userId));
+  const outgoingConnectionQ = query(collection(db, 'connections'), where('fromUserId', '==', userId));
 
   const [incomingSwapSnap, outgoingSwapSnap, incomingConnSnap, outgoingConnSnap] = await Promise.all([
     getDocs(incomingSwapQ),
@@ -476,7 +492,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       return;
     }
-
     if (swap.status === 'accepted') {
       addNotification({
         id: `swap_${swapDoc.id}`,
@@ -492,7 +507,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       return;
     }
-
     if (swap.status === 'rejected') {
       addNotification({
         id: `swap_${swapDoc.id}`,
@@ -508,7 +522,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       return;
     }
-
     if (swap.status === 'completed') {
       addNotification({
         id: `swap_${swapDoc.id}`,
@@ -528,7 +541,6 @@ export async function getNotificationsForUser(userId: string) {
   outgoingSwapSnap.docs.forEach((swapDoc) => {
     const swap = convertTimestamps(swapDoc.data() as SwapRequest);
     if (swap.status === 'pending') return;
-
     const createdAt = swap.updatedAt || swap.createdAt;
 
     if (swap.status === 'accepted') {
@@ -546,7 +558,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       return;
     }
-
     if (swap.status === 'rejected') {
       addNotification({
         id: `swap_out_${swapDoc.id}`,
@@ -562,7 +573,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       return;
     }
-
     if (swap.status === 'completed') {
       addNotification({
         id: `swap_out_${swapDoc.id}`,
@@ -601,7 +611,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       continue;
     }
-
     if (conn.status === 'accepted') {
       addNotification({
         id: `conn_${connDoc.id}`,
@@ -617,7 +626,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       continue;
     }
-
     if (conn.status === 'declined') {
       addNotification({
         id: `conn_${connDoc.id}`,
@@ -637,7 +645,6 @@ export async function getNotificationsForUser(userId: string) {
   for (const connDoc of outgoingConnSnap.docs) {
     const conn = convertTimestamps(connDoc.data() as any);
     if (conn.status === 'pending') continue;
-
     const targetUser = await getUserById(conn.toUserId);
     const targetName = targetUser?.name || 'A user';
     const targetInitials = targetUser?.initials || 'U';
@@ -658,7 +665,6 @@ export async function getNotificationsForUser(userId: string) {
       });
       continue;
     }
-
     if (conn.status === 'declined') {
       addNotification({
         id: `conn_out_${connDoc.id}`,
@@ -694,7 +700,6 @@ export async function clearNotificationsForUser(userId: string) {
 
 export async function getAllUsers(): Promise<User[]> {
   if (!isFirebaseConfigured || !db) {
-    // For demo, collect unique users from skills
     const userMap = new Map<string, User>();
     demoSkills.forEach(skill => {
       if (!userMap.has(skill.userId)) {
@@ -729,7 +734,6 @@ export async function getAllSwapRequests(): Promise<SwapRequest[]> {
 
 export async function deleteUser(uid: string) {
   if (!isFirebaseConfigured || !db) {
-    // In demo, just remove from skills and requests
     demoSkills = demoSkills.filter(s => s.userId !== uid);
     demoSwapRequests = demoSwapRequests.filter(r => r.fromUserId !== uid && r.toUserId !== uid);
     emitDemoSkills();
@@ -746,4 +750,16 @@ export async function deleteSwapRequest(id: string) {
   }
 
   await deleteDoc(doc(db, 'swap_requests', id));
+}
+
+export async function getAllConnections(): Promise<UserConnection[]> {
+  if (!isFirebaseConfigured || !db) return [];
+  const q = query(collection(db, 'connections'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => convertTimestamps({ id: d.id, ...d.data() } as UserConnection));
+}
+
+export async function deleteConnection(id: string): Promise<void> {
+  if (!isFirebaseConfigured || !db) return;
+  await deleteDoc(doc(db, 'connections', id));
 }

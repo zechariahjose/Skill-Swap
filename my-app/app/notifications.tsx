@@ -368,7 +368,7 @@ export default function NotificationsScreen() {
   }, [loadNotifications]);
 
   const handleViewProfile = useCallback((userId: string) => {
-    router.push(`/user-profile?userId=${userId}`);
+    router.push({ pathname: '/user-profile', params: { userId } });
   }, []);
 
   const handleClearNotifications = useCallback(() => {

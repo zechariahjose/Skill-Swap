@@ -85,6 +85,7 @@ export default function RequestsScreen() {
               <SwapRequestCard
                 request={item}
                 mode={mode}
+                currentUserId={userProfile?.uid}
                 onAccept={(id) => updateSwapStatus(id, 'accepted')}
                 onReject={(id) => updateSwapStatus(id, 'rejected')}
                 onComplete={(id) => updateSwapStatus(id, 'completed')}
