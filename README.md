@@ -62,10 +62,6 @@ Using npm:
 ```bash
 npm install
 ```
-Using yarn:
-```bash
-yarn install
-```
 
 ---
 
@@ -104,9 +100,9 @@ npm run android
 npm run ios
 ```
 ---
-## Run on Web
+## Run on iPhone
 ```bash
-npm run web
+npx expo start
 ```
 
 ---
