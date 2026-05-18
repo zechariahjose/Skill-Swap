@@ -11,25 +11,28 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
 import EmptyState from '../components/EmptyState';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
+
 import {
   getUserConnections,
   updateConnectionStatus,
   getUserById,
 } from '../../src/firebase/firestore';
+
 import { UserConnection, User } from '../../src/types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
 
 interface ConnectionItem {
   connection: UserConnection;
   user: User;
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface ConnectionCardProps {
   item: ConnectionItem;
@@ -40,6 +43,10 @@ interface ConnectionCardProps {
   onDecline: (id: string) => Promise<void>;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Card
+// ─────────────────────────────────────────────────────────────
+
 function ConnectionCard({
   item,
   currentUserId,
@@ -49,14 +56,16 @@ function ConnectionCard({
   onDecline,
 }: ConnectionCardProps) {
   const [busy, setBusy] = useState(false);
+
   const { connection, user } = item;
+
   const isIncoming = connection.toUserId === currentUserId;
   const isPending = connection.status === 'pending';
   const isAccepted = connection.status === 'accepted';
 
   const wrap = (fn: (id: string) => Promise<void>) => async () => {
-    setBusy(true);
     try {
+      setBusy(true);
       await fn(connection.id);
     } finally {
       setBusy(false);
@@ -64,87 +73,130 @@ function ConnectionCard({
   };
 
   return (
-    <View style={styles.connectionCard}>
-      {/* Header row */}
-      <View style={styles.connectionHeader}>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName} numberOfLines={1}>
-            {user.name}
+    <View style={styles.card}>
+      {/* Top Section */}
+      <View style={styles.cardTop}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {user.name?.charAt(0)?.toUpperCase()}
           </Text>
+        </View>
+
+        <View style={styles.userContent}>
+          <View style={styles.userRow}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {user.name}
+            </Text>
+
+            <View
+              style={[
+                styles.badge,
+                isAccepted ? styles.badgeSuccess : styles.badgePending,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  {
+                    color: isAccepted
+                      ? '#2D6A4F'
+                      : colors.muted,
+                  },
+                ]}
+              >
+                {isAccepted ? 'Connected' : 'Pending'}
+              </Text>
+            </View>
+          </View>
+
           {user.bio ? (
             <Text style={styles.userBio} numberOfLines={2}>
               {user.bio}
             </Text>
-          ) : null}
-        </View>
-
-        <View
-          style={[
-            styles.statusBadge,
-            isAccepted ? styles.statusBadgeAccepted : styles.statusBadgePending,
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusBadgeText,
-              { color: isAccepted ? '#3F5A48' : colors.muted },
-            ]}
-          >
-            {isAccepted ? 'Connected' : 'Pending'}
-          </Text>
+          ) : (
+            <Text style={styles.placeholderBio}>
+              No bio added yet
+            </Text>
+          )}
         </View>
       </View>
 
       {/* Actions */}
-      <View style={styles.connectionActions}>
+      <View style={styles.actions}>
         {isPending && isIncoming ? (
           <>
             <TouchableOpacity
               style={[
-                styles.actionButton,
-                styles.acceptButton,
+                styles.primaryButton,
                 busy && styles.buttonDisabled,
               ]}
               onPress={wrap(onAccept)}
               disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel="Accept connection"
+              activeOpacity={0.85}
             >
-              <Ionicons name="checkmark" size={16} color="white" />
-              <Text style={styles.actionButtonText}>Accept</Text>
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="white"
+              />
+
+              <Text style={styles.primaryButtonText}>
+                Accept
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
-                styles.actionButton,
-                styles.declineButton,
+                styles.secondaryButton,
                 busy && styles.buttonDisabled,
               ]}
               onPress={wrap(onDecline)}
               disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel="Decline connection"
+              activeOpacity={0.85}
             >
-              <Ionicons name="close" size={16} color="white" />
-              <Text style={styles.actionButtonText}>Decline</Text>
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color="#B6465F"
+              />
+
+              <Text style={styles.secondaryButtonText}>
+                Decline
+              </Text>
             </TouchableOpacity>
           </>
         ) : isPending ? (
-          <View style={styles.sentRow}>
-            <Ionicons name="time-outline" size={14} color={colors.muted} />
-            <Text style={styles.pendingText}>Request sent</Text>
+          <View style={styles.pendingContainer}>
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={colors.muted}
+            />
+
+            <Text style={styles.pendingText}>
+              Waiting for response
+            </Text>
           </View>
         ) : (
           <TouchableOpacity
-            style={styles.viewProfileButton}
-            onPress={() => router.push({ pathname: '/user-profile', params: { userId: user.uid } })}
-            accessibilityRole="button"
-            accessibilityLabel={`View ${user.name}'s profile`}
+            style={styles.profileButton}
+            onPress={() =>
+              router.push({
+                pathname: '/user-profile',
+                params: { userId: user.uid },
+              })
+            }
+            activeOpacity={0.85}
           >
-            <Text style={[styles.viewProfileText, { color: colors.accent }]}>
+            <Text style={styles.profileButtonText}>
               View Profile
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+
+            <Ionicons
+              name="arrow-forward"
+              size={16}
+              color={colors.accent}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -152,11 +204,14 @@ function ConnectionCard({
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Screen
+// ─────────────────────────────────────────────────────────────
 
 export default function ConnectionsScreen() {
   const { userProfile } = useAuthContext();
   const { colors } = useTheme();
+
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,24 +230,36 @@ export default function ConnectionsScreen() {
         const results = await Promise.all(
           list.map(async (conn) => {
             const otherUserId =
-              conn.fromUserId === userProfile.uid ? conn.toUserId : conn.fromUserId;
+              conn.fromUserId === userProfile.uid
+                ? conn.toUserId
+                : conn.fromUserId;
+
             const user = await getUserById(otherUserId);
-            return user ? { connection: conn, user } : null;
+
+            return user
+              ? { connection: conn, user }
+              : null;
           })
         );
+
         return results.filter(Boolean) as ConnectionItem[];
       };
 
-      const [resolvedConnections, resolvedPending] = await Promise.all([
-        resolveUsers(connData),
-        resolveUsers(pendingData),
-      ]);
+      const [resolvedConnections, resolvedPending] =
+        await Promise.all([
+          resolveUsers(connData),
+          resolveUsers(pendingData),
+        ]);
 
       setConnections(resolvedConnections);
       setPendingRequests(resolvedPending);
     } catch (error) {
-      console.error('Error loading connections:', error);
-      Alert.alert('Error', 'Failed to load connections');
+      console.error(error);
+
+      Alert.alert(
+        'Error',
+        'Failed to load connections.'
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -207,7 +274,11 @@ export default function ConnectionsScreen() {
     async (connectionId: string) => {
       await updateConnectionStatus(connectionId, 'accepted');
       await loadConnections();
-      Alert.alert('Success', 'Connection accepted!');
+
+      Alert.alert(
+        'Connection Accepted',
+        'You are now connected.'
+      );
     },
     [loadConnections]
   );
@@ -216,6 +287,7 @@ export default function ConnectionsScreen() {
     async (connectionId: string) => {
       await updateConnectionStatus(connectionId, 'declined');
       await loadConnections();
+
       Alert.alert('Connection declined');
     },
     [loadConnections]
@@ -244,23 +316,22 @@ export default function ConnectionsScreen() {
         onDecline={handleDeclineConnection}
       />
     ),
-    [userProfile?.uid, colors, styles, handleAcceptConnection, handleDeclineConnection]
-  );
-
-  const keyExtractor = useCallback(
-    (item: ConnectionItem) => item.connection.id,
-    []
-  );
-
-  const Separator = useCallback(
-    () => <View style={styles.separator} />,
-    [styles]
+    [
+      userProfile?.uid,
+      colors,
+      styles,
+      handleAcceptConnection,
+      handleDeclineConnection,
+    ]
   );
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator
+          size="large"
+          color={colors.accent}
+        />
       </View>
     );
   }
@@ -269,18 +340,27 @@ export default function ConnectionsScreen() {
     <View style={styles.screen}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Connections</Text>
-        <Text style={styles.headerSubtitle}>
+        <Text style={styles.title}>
+          Your Network
+        </Text>
+
+        <Text style={styles.subtitle}>
           {isEmpty
-            ? 'Start building your network'
-            : `${connections.length} connected · ${pendingRequests.length} pending`}
+            ? 'Start building meaningful connections'
+            : `${connections.length} connected • ${pendingRequests.length} pending`}
         </Text>
       </View>
 
       <FlatList
         data={listData}
-        keyExtractor={keyExtractor}
+        keyExtractor={(item) => item.connection.id}
         renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          isEmpty
+            ? styles.emptyContainer
+            : styles.listContent
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -288,23 +368,24 @@ export default function ConnectionsScreen() {
             tintColor={colors.accent}
           />
         }
+        ItemSeparatorComponent={() => (
+          <View style={{ height: 18 }} />
+        )}
         ListEmptyComponent={
           <EmptyState
             emoji="🤝"
             title="No connections yet"
-            subtitle="Connect with people to start swapping skills"
+            subtitle="Connect with people to start exchanging skills and opportunities."
           />
         }
-        contentContainerStyle={isEmpty ? styles.emptyList : styles.listContent}
-        ItemSeparatorComponent={Separator}
-        removeClippedSubviews
-        windowSize={10}
       />
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────
 
 const getStyles = (colors: any) =>
   StyleSheet.create({
@@ -312,127 +393,207 @@ const getStyles = (colors: any) =>
       flex: 1,
       backgroundColor: colors.background,
     },
-    centered: {
+
+    center: {
       justifyContent: 'center',
       alignItems: 'center',
     },
+
     header: {
-      paddingHorizontal: Theme.spacing.lg,
-      paddingTop: Theme.spacing.xl * 2,
-      paddingBottom: Theme.spacing.md,
+      paddingTop: 90,
+      paddingBottom: 24,
+      paddingHorizontal: 24,
     },
-    headerTitle: {
-      fontSize: Theme.fontSize.h1,
-      fontWeight: '600',
+
+    title: {
+      fontSize: 34,
+      fontWeight: '700',
       color: colors.ink,
-      marginBottom: Theme.spacing.xs,
+      letterSpacing: -1,
     },
-    headerSubtitle: {
-      fontSize: Theme.fontSize.body,
+
+    subtitle: {
+      marginTop: 6,
+      fontSize: 15,
       color: colors.muted,
+      lineHeight: 22,
     },
+
     listContent: {
-      paddingVertical: Theme.spacing.sm,
+      paddingHorizontal: 20,
+      paddingBottom: 32,
     },
-    connectionCard: {
+
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+
+    card: {
       backgroundColor: colors.surface,
-      marginHorizontal: Theme.spacing.lg,
-      padding: Theme.spacing.lg,
-      borderRadius: Theme.borderRadius.lg,
-      ...Theme.shadow.card,
+      borderRadius: 26,
+      padding: 20,
+
+      shadowColor: '#000',
+      shadowOpacity: 0.06,
+      shadowRadius: 18,
+      shadowOffset: {
+        width: 0,
+        height: 6,
+      },
+
+      elevation: 4,
+
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.04)',
     },
-    connectionHeader: {
+
+    cardTop: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.accent,
+
+      alignItems: 'center',
+      justifyContent: 'center',
+
+      marginRight: 14,
+    },
+
+    avatarText: {
+      color: 'white',
+      fontSize: 22,
+      fontWeight: '700',
+    },
+
+    userContent: {
+      flex: 1,
+    },
+
+    userRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: Theme.spacing.md,
-      gap: Theme.spacing.sm,
+      alignItems: 'center',
+      marginBottom: 6,
+      gap: 10,
     },
-    userInfo: {
-      flex: 1,
-    },
+
     userName: {
-      fontSize: Theme.fontSize.h2,
-      fontWeight: '600',
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '700',
       color: colors.ink,
-      marginBottom: 2,
     },
+
     userBio: {
-      fontSize: Theme.fontSize.body,
+      fontSize: 14,
+      lineHeight: 22,
       color: colors.body,
-      lineHeight: 20,
     },
-    statusBadge: {
-      paddingHorizontal: Theme.spacing.sm,
-      paddingVertical: 3,
-      borderRadius: Theme.borderRadius.sm,
-      flexShrink: 0,
-    },
-    statusBadgeAccepted: {
-      backgroundColor: '#3F5A4820',
-    },
-    statusBadgePending: {
-      backgroundColor: colors.softSurface,
-    },
-    statusBadgeText: {
-      fontSize: Theme.fontSize.small,
-      fontWeight: '600',
-      textTransform: 'capitalize',
-    },
-    connectionActions: {
-      flexDirection: 'row',
-      gap: Theme.spacing.sm,
-    },
-    actionButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: Theme.spacing.sm,
-      paddingHorizontal: Theme.spacing.md,
-      borderRadius: Theme.borderRadius.md,
-      gap: Theme.spacing.xs,
-    },
-    acceptButton: {
-      backgroundColor: '#3F5A48',
-    },
-    declineButton: {
-      backgroundColor: '#6A4040',
-    },
-    buttonDisabled: {
-      opacity: 0.5,
-    },
-    actionButtonText: {
-      color: 'white',
-      fontSize: Theme.fontSize.small,
-      fontWeight: '600',
-    },
-    sentRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Theme.spacing.xs,
-      flex: 1,
-    },
-    pendingText: {
-      fontSize: Theme.fontSize.body,
+
+    placeholderBio: {
+      fontSize: 14,
       color: colors.muted,
       fontStyle: 'italic',
     },
-    viewProfileButton: {
+
+    badge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+
+    badgeSuccess: {
+      backgroundColor: 'rgba(45,106,79,0.12)',
+    },
+
+    badgePending: {
+      backgroundColor: colors.softSurface,
+    },
+
+    badgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    actions: {
+      marginTop: 20,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: Theme.spacing.sm,
-      gap: Theme.spacing.xs,
+      gap: 12,
     },
-    viewProfileText: {
-      fontSize: Theme.fontSize.body,
-      fontWeight: '600',
-    },
-    separator: {
-      height: Theme.spacing.md,
-    },
-    emptyList: {
+
+    primaryButton: {
       flex: 1,
+      height: 48,
+      borderRadius: 16,
+
+      backgroundColor: colors.accent,
+
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'center',
+
+      gap: 8,
+    },
+
+    primaryButtonText: {
+      color: 'white',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+
+    secondaryButton: {
+      flex: 1,
+      height: 48,
+      borderRadius: 16,
+
+      backgroundColor: '#FFF1F4',
+
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+
+      gap: 8,
+    },
+
+    secondaryButtonText: {
+      color: '#B6465F',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+
+    pendingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+
+    pendingText: {
+      fontSize: 14,
+      color: colors.muted,
+      fontWeight: '500',
+    },
+
+    profileButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+
+    profileButtonText: {
+      color: colors.accent,
+      fontWeight: '700',
+      fontSize: 15,
     },
   });
