@@ -34,6 +34,7 @@ type ProfileDrawerProps = {
   onPortfolioLinksChange: (links: PortfolioLink[]) => void;
   onAvailabilityChange: (status: AvailabilityStatus) => void;
   onSave: () => void;
+  onSavePortfolio: (items: PortfolioItem[], links: PortfolioLink[]) => Promise<void>;
   onSignOut: () => void;
   onChangePassword: (value: string) => Promise<void>;
   onDeleteAccount: () => Promise<void>;
@@ -57,6 +58,7 @@ export default function ProfileDrawer({
   onPortfolioLinksChange,
   onAvailabilityChange,
   onSave,
+  onSavePortfolio,
   saving,
   onSignOut,
   onChangePassword,
@@ -94,7 +96,7 @@ export default function ProfileDrawer({
 
   const createId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-  const addPortfolioItem = () => {
+  const addPortfolioItem = async () => {
     if (!itemTitle.trim() || !itemMediaUrl.trim()) return;
     const next: PortfolioItem = {
       id: createId(),
@@ -105,24 +107,40 @@ export default function ProfileDrawer({
       mediaUrl: itemMediaUrl.trim(),
       externalLink: itemExternalLink.trim() || undefined,
     };
-    onPortfolioItemsChange([next, ...portfolioItems]);
+    const updated = [next, ...portfolioItems];
+    onPortfolioItemsChange(updated);
     setItemTitle('');
     setItemDescription('');
     setItemSkill('');
     setItemMediaUrl('');
     setItemExternalLink('');
+    await onSavePortfolio(updated, portfolioLinks);
   };
 
-  const addPortfolioLink = () => {
+  const addPortfolioLink = async () => {
     if (!linkLabel.trim() || !linkUrl.trim()) return;
     const next: PortfolioLink = {
       id: createId(),
       label: linkLabel.trim(),
       url: linkUrl.trim(),
     };
-    onPortfolioLinksChange([next, ...portfolioLinks]);
+    const updated = [next, ...portfolioLinks];
+    onPortfolioLinksChange(updated);
     setLinkLabel('');
     setLinkUrl('');
+    await onSavePortfolio(portfolioItems, updated);
+  };
+
+  const removePortfolioItem = async (id: string) => {
+    const updated = portfolioItems.filter(x => x.id !== id);
+    onPortfolioItemsChange(updated);
+    await onSavePortfolio(updated, portfolioLinks);
+  };
+
+  const removePortfolioLink = async (id: string) => {
+    const updated = portfolioLinks.filter(x => x.id !== id);
+    onPortfolioLinksChange(updated);
+    await onSavePortfolio(portfolioItems, updated);
   };
 
   return (
@@ -271,7 +289,7 @@ export default function ProfileDrawer({
                     <Text style={[styles.listCardTitle, { color: colors.ink }]}>{item.title}</Text>
                     <Text style={[styles.listCardMeta, { color: colors.muted }]}>{item.mediaType} · {item.skillUsed || 'General'}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => onPortfolioItemsChange(portfolioItems.filter((x) => x.id !== item.id))}>
+                  <TouchableOpacity onPress={() => removePortfolioItem(item.id)}>
                     <Ionicons name="trash-outline" size={18} color="#8B4444" />
                   </TouchableOpacity>
                 </View>
@@ -296,7 +314,7 @@ export default function ProfileDrawer({
                     <Text style={[styles.listCardTitle, { color: colors.ink }]}>{link.label}</Text>
                     <Text style={[styles.listCardMeta, { color: colors.muted }]} numberOfLines={1}>{link.url}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => onPortfolioLinksChange(portfolioLinks.filter((x) => x.id !== link.id))}>
+                  <TouchableOpacity onPress={() => removePortfolioLink(link.id)}>
                     <Ionicons name="trash-outline" size={18} color="#8B4444" />
                   </TouchableOpacity>
                 </View>

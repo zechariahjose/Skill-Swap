@@ -22,6 +22,7 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { createSwapRequest, getSkillsByUser } from '../../src/firebase/firestore';
 import { useSkills } from '../../src/hooks/useSkills';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 import { CATEGORIES, Category, Skill } from '../../src/types';
 
 function getGreeting(name?: string) {
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const { skills, loading, refreshSkills } = useSkills();
   const { userProfile }                    = useAuthContext();
   const { colors }                         = useTheme();
+  const { count: unreadCount }             = useNotificationCount();
   const [search, setSearch]                = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [refreshing, setRefreshing]        = useState(false);
@@ -57,7 +59,7 @@ export default function HomeScreen() {
 
   const activeUsers = useMemo(() => {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    const users  = new Map<string, { initials: string; name: string }>();
+    const users  = new Map<string, { initials: string; name: string; userId: string }>();
     skills.forEach((skill) => {
       const createdAt = skill.createdAt;
       const timestamp =
@@ -67,7 +69,7 @@ export default function HomeScreen() {
           ? (createdAt as { seconds: number }).seconds * 1000
           : 0;
       if (timestamp >= cutoff && !users.has(skill.userId)) {
-        users.set(skill.userId, { initials: skill.userInitials, name: skill.userName });
+        users.set(skill.userId, { initials: skill.userInitials, name: skill.userName, userId: skill.userId });
       }
     });
     return Array.from(users.values()).slice(0, 8);
@@ -158,17 +160,20 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              {/* Right: notification button — pinned to top-right, aligned with badge */}
+              {/* Right: notification button */}
               <TouchableOpacity
                 onPress={() => router.push('/notifications')}
                 style={[styles.notificationButton, { backgroundColor: colors.softSurface ?? colors.surface }]}
                 activeOpacity={0.7}
               >
                 <Ionicons name="notifications-outline" size={20} color={colors.ink} />
-                {/* Uncomment when you have an unread count: */}
-                {/* <View style={[styles.notificationBadge, { backgroundColor: colors.statusRed, borderColor: colors.background }]}>
-                  <Text style={styles.notificationBadgeText}>3</Text>
-                </View> */}
+                {unreadCount > 0 && (
+                  <View style={[styles.notificationBadge, { backgroundColor: '#6A4040', borderColor: colors.background }]}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
 
             </View>
@@ -201,7 +206,12 @@ export default function HomeScreen() {
                   contentContainerStyle={styles.peopleRow}
                 >
                   {activeUsers.map((member, i) => (
-                    <View key={member.initials + member.name + i} style={styles.personItem}>
+                    <TouchableOpacity
+                      key={member.userId + i}
+                      style={styles.personItem}
+                      onPress={() => router.push({ pathname: '/user-profile', params: { userId: member.userId } })}
+                      activeOpacity={0.7}
+                    >
                       <View style={[styles.avatarRing, { borderColor: colors.border }]}>
                         <Avatar initials={member.initials} size={44} />
                       </View>
@@ -211,7 +221,7 @@ export default function HomeScreen() {
                       >
                         {member.name.split(' ')[0]}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </ScrollView>
               </View>

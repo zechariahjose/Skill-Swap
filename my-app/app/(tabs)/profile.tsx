@@ -72,7 +72,15 @@ export default function ProfileScreen() {
     setPortfolioLinks(userProfile?.portfolioLinks ?? []);
     setAvailabilityStatus(userProfile?.availabilityStatus ?? 'available');
     loadMySkills();
-  }, [userProfile?.uid, userProfile?.name, userProfile?.bio, userProfile?.location, userProfile?.availabilityStatus]);
+  }, [
+    userProfile?.uid,
+    userProfile?.name,
+    userProfile?.bio,
+    userProfile?.location,
+    userProfile?.availabilityStatus,
+    userProfile?.portfolioItems,
+    userProfile?.portfolioLinks,
+  ]);
 
   useFocusEffect(useCallback(() => { loadMySkills(); }, [userProfile?.uid]));
 
@@ -109,6 +117,16 @@ export default function ProfileScreen() {
       Alert.alert('Save failed', error instanceof Error ? error.message : 'Try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onSavePortfolio = async (items: PortfolioItem[], links: PortfolioLink[]) => {
+    if (!userProfile) return;
+    try {
+      await updateUserProfile(userProfile.uid, { portfolioItems: items, portfolioLinks: links });
+      await refreshProfile();
+    } catch {
+      Alert.alert('Save failed', 'Could not save portfolio. Try again.');
     }
   };
 
@@ -213,6 +231,7 @@ export default function ProfileScreen() {
         data={skills}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
+        extraData={[portfolioItems, portfolioLinks, networkStats, rating, totalSwaps]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
         }
@@ -348,8 +367,20 @@ export default function ProfileScreen() {
                           if (target) Linking.openURL(target).catch(() => {});
                         }}
                       >
-                        <View style={styles.portfolioBadge}>
-                          <Text style={styles.portfolioBadgeText}>{item.mediaType.toUpperCase()}</Text>
+                        <View style={styles.portfolioCardHeader}>
+                          <View style={styles.portfolioBadge}>
+                            <Text style={styles.portfolioBadgeText}>{item.mediaType.toUpperCase()}</Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const updated = portfolioItems.filter(x => x.id !== item.id);
+                              setPortfolioItems(updated);
+                              onSavePortfolio(updated, portfolioLinks);
+                            }}
+                            hitSlop={8}
+                          >
+                            <Ionicons name="trash-outline" size={14} color={colors.muted} />
+                          </TouchableOpacity>
                         </View>
                         <Text style={styles.portfolioTitle} numberOfLines={2}>{item.title}</Text>
                         {item.skillUsed ? <Text style={styles.portfolioMeta}>{item.skillUsed}</Text> : null}
@@ -442,6 +473,7 @@ export default function ProfileScreen() {
         onPortfolioLinksChange={setPortfolioLinks}
         onAvailabilityChange={setAvailabilityStatus}
         onSave={onSave}
+        onSavePortfolio={onSavePortfolio}
         saving={saving}
         onChangePassword={handleChangePassword}
         onDeleteAccount={handleDeleteAccount}
@@ -665,6 +697,12 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       borderColor: colors.border,
       padding: Theme.spacing.md,
       gap: 4,
+    },
+    portfolioCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 2,
     },
     portfolioBadge: {
       alignSelf: 'flex-start',

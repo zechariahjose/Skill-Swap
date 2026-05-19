@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 import { SwapRequest, SwapStatus } from '../../src/types';
@@ -160,9 +161,14 @@ export default function SwapRequestCard({
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.headerRow}>
           <Avatar initials={otherInitials} size={40} />
-          <View style={styles.nameGroup} pointerEvents="none">
+          <TouchableOpacity
+            style={styles.nameGroup}
+            onPress={() => router.push({ pathname: '/user-profile', params: { userId: otherUserId } })}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.name, { color: colors.ink }]}>{otherName}</Text>
-          </View>
+            <Text style={[styles.nameHint, { color: colors.accent }]}>View profile →</Text>
+          </TouchableOpacity>
           <View style={styles.statusGroup}>
             <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
             <Text style={[styles.statusLabel, { color: colors.muted }]}>{status.label}</Text>
@@ -268,6 +274,11 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 17,
+  },
+  nameHint: {
+    fontFamily: 'Nunito_400Regular',
+    fontSize: 11,
+    marginTop: 1,
   },
   statusGroup: {
     flexDirection: 'row',
