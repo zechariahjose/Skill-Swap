@@ -107,30 +107,4 @@ npx expo start
 
 ---
 
-#  Security Notes
-## Admin Access (Development Only)
-The project currently contains a hardcoded admin login for development and testing purposes:
-
-```txt
-Email: admin
-Password: admin
-```
-
-The admin panel includes elevated permissions such as:
-
-- User management
-- Data deletion
-- Content moderation
-
----
-
-# Demo Mode
-Skill Swap supports a built-in demo mode.
-If Firebase credentials are missing:
-
-- The app still launches successfully
-- Demo data is loaded locally
-- Users can explore UI and app functionality without backend setup
-
----
 
