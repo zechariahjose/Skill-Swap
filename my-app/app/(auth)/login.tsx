@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { login } from '../../src/firebase/auth';
+import { isAdminUser } from '../../src/firebase/firestore';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
 
@@ -27,19 +28,11 @@ export default function LoginScreen() {
       return;
     }
 
-    // Admin access - DEVELOPMENT/TESTING FEATURE ONLY
-    // WARNING: This hardcoded admin access should be REMOVED or SECURED
-    // before production deployment. Anyone can access admin panel with
-    // email: 'admin' and password: 'admin'
-    if (email.trim() === 'admin' && password === 'admin') {
-      router.replace('/admin');
-      return;
-    }
-
     try {
       setSubmitting(true);
-      await login(email.trim(), password);
-      router.replace('/(tabs)/home');
+      const user = await login(email.trim(), password);
+      const admin = await isAdminUser(user.uid);
+      router.replace(admin ? '/admin' : '/(tabs)/home');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
       Alert.alert('Unable to sign in', message);

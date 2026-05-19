@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Avatar from './components/Avatar';
 import { Colors } from '../src/constants/Colors';
 import { Theme } from '../src/constants/Theme';
+import { useAuthContext } from '../src/context/AuthContext';
+import { signOut } from '../src/firebase/auth';
 import {
   deleteSkill,
   deleteSwapRequest,
@@ -25,11 +27,6 @@ import {
 } from '../src/firebase/firestore';
 import { Skill, SwapRequest, User, UserConnection } from '../src/types';
 
-// SECURITY WARNING: This admin panel is currently accessible via hardcoded
-// credentials in login.tsx. This is a DEVELOPMENT/TESTING feature only.
-// REMOVE or SECURE this functionality before production deployment.
-// ⚠️  DEVELOPMENT ONLY — remove or gate behind a real auth check before production.
-
 type Tab = 'users' | 'skills' | 'requests' | 'connections';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -40,6 +37,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function AdminScreen() {
+  const { isAdmin, loading: authLoading, firebaseUser } = useAuthContext();
   const [users,       setUsers]       = useState<User[]>([]);
   const [skills,      setSkills]      = useState<Skill[]>([]);
   const [requests,    setRequests]    = useState<SwapRequest[]>([]);
@@ -47,6 +45,13 @@ export default function AdminScreen() {
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
   const [activeTab,   setActiveTab]   = useState<Tab>('users');
+
+  // Auth guard — redirect if not an admin
+  useEffect(() => {
+    if (!authLoading && (!firebaseUser || !isAdmin)) {
+      router.replace('/(auth)/login');
+    }
+  }, [authLoading, firebaseUser, isAdmin]);
 
   const loadData = async () => {
     try {
@@ -343,7 +348,7 @@ export default function AdminScreen() {
               </View>
               <TouchableOpacity
                 style={styles.signOutBtn}
-                onPress={() => router.replace('/(auth)/login')}
+                onPress={() => signOut()}
                 activeOpacity={0.8}
               >
                 <Text style={styles.signOutText}>Sign out</Text>

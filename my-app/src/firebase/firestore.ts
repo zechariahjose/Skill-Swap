@@ -763,3 +763,15 @@ export async function deleteConnection(id: string): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
   await deleteDoc(doc(db, 'connections', id));
 }
+
+/**
+ * Check if a user has admin privileges.
+ * Admins are stored in the `admins` Firestore collection as documents
+ * with the user's UID as the document ID.
+ * To grant admin: create doc `admins/{uid}` with field `{ granted: true }`.
+ */
+export async function isAdminUser(uid: string): Promise<boolean> {
+  if (!isFirebaseConfigured || !db) return false;
+  const snap = await getDoc(doc(db, 'admins', uid));
+  return snap.exists() && snap.data()?.granted === true;
+}

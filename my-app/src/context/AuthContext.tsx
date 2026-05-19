@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { subscribeToAuth, getUserProfile } from '../firebase/auth';
+import { isAdminUser } from '../firebase/firestore';
 import { User } from '../types';
 
 interface AuthContextValue {
   firebaseUser: FirebaseUser | null;
   userProfile:  User | null;
+  isAdmin:      boolean;
   loading:      boolean;
   refreshProfile: () => Promise<void>;
 }
@@ -13,6 +15,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   firebaseUser:    null,
   userProfile:     null,
+  isAdmin:         false,
   loading:         true,
   refreshProfile:  async () => {},
 });
@@ -20,11 +23,16 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userProfile,  setUserProfile]  = useState<User | null>(null);
+  const [isAdmin,      setIsAdmin]      = useState(false);
   const [loading,      setLoading]      = useState(true);
 
   const loadProfile = async (uid: string) => {
-    const profile = await getUserProfile(uid);
+    const [profile, adminStatus] = await Promise.all([
+      getUserProfile(uid),
+      isAdminUser(uid),
+    ]);
     setUserProfile(profile as User | null);
+    setIsAdmin(adminStatus);
   };
 
   const refreshProfile = async () => {
@@ -41,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await loadProfile(fbUser.uid);
         } else {
           setUserProfile(null);
+          setIsAdmin(false);
         }
         setLoading(false);
       });
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, userProfile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ firebaseUser, userProfile, isAdmin, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
