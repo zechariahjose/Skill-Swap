@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
 import SkillCard from '../components/SkillCard';
+import SocialLinkChip from '../components/SocialLinkChip';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -27,7 +28,7 @@ import {
   subscribeToSwapRequests,
   updateUserProfile,
 } from '../../src/firebase/firestore';
-import { PortfolioItem, PortfolioLink, Skill, SwapRequest } from '../../src/types';
+import { PortfolioItem, PortfolioLink, Skill, SwapRequest, User } from '../../src/types';
 import { AvailabilityStatus } from '../../src/types';
 import ProfileDrawer from './ProfileDrawer';
 
@@ -37,6 +38,11 @@ export default function ProfileScreen() {
   const [name, setName] = useState(userProfile?.name ?? '');
   const [bio, setBio] = useState(userProfile?.bio ?? '');
   const [location, setLocation] = useState(userProfile?.location ?? '');
+  const [pronouns, setPronouns] = useState(userProfile?.pronouns ?? '');
+  const [company, setCompany] = useState(userProfile?.company ?? '');
+  const [gmail, setGmail] = useState(userProfile?.gmail ?? '');
+  const [website, setWebsite] = useState(userProfile?.website ?? '');
+  const [socialLinks, setSocialLinks] = useState<NonNullable<User['socialLinks']>>(userProfile?.socialLinks ?? {});
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>(userProfile?.portfolioItems ?? []);
   const [portfolioLinks, setPortfolioLinks] = useState<PortfolioLink[]>(userProfile?.portfolioLinks ?? []);
   const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>(userProfile?.availabilityStatus ?? 'available');
@@ -68,6 +74,11 @@ export default function ProfileScreen() {
     setName(userProfile?.name ?? '');
     setBio(userProfile?.bio ?? '');
     setLocation(userProfile?.location ?? '');
+    setPronouns(userProfile?.pronouns ?? '');
+    setCompany(userProfile?.company ?? '');
+    setGmail(userProfile?.gmail ?? '');
+    setWebsite(userProfile?.website ?? '');
+    setSocialLinks(userProfile?.socialLinks ?? {});
     setPortfolioItems(userProfile?.portfolioItems ?? []);
     setPortfolioLinks(userProfile?.portfolioLinks ?? []);
     setAvailabilityStatus(userProfile?.availabilityStatus ?? 'available');
@@ -108,6 +119,9 @@ export default function ProfileScreen() {
       setSaving(true);
       await updateUserProfile(userProfile.uid, {
         name: name.trim(), bio: bio.trim(), location: location.trim(),
+        pronouns: pronouns.trim(), company: company.trim(),
+        gmail: gmail.trim(), website: website.trim(),
+        socialLinks,
         portfolioItems, portfolioLinks, availabilityStatus,
       });
       await refreshProfile();
@@ -263,12 +277,24 @@ export default function ProfileScreen() {
                 )}
               </View>
 
-              {/* Meta row: location + member since */}
+              {/* Meta row: location + member since + extra info */}
               <View style={styles.metaRow}>
+                {userProfile.pronouns ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="person-outline" size={12} color={colors.muted} />
+                    <Text style={styles.metaText}>{userProfile.pronouns}</Text>
+                  </View>
+                ) : null}
                 {userProfile.location ? (
                   <View style={styles.metaItem}>
                     <Ionicons name="location-outline" size={12} color={colors.muted} />
                     <Text style={styles.metaText}>{userProfile.location}</Text>
+                  </View>
+                ) : null}
+                {userProfile.company ? (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="business-outline" size={12} color={colors.muted} />
+                    <Text style={styles.metaText}>{userProfile.company}</Text>
                   </View>
                 ) : null}
                 {memberSince ? (
@@ -278,6 +304,39 @@ export default function ProfileScreen() {
                   </View>
                 ) : null}
               </View>
+
+              {/* Website + gmail row */}
+              {(userProfile.website || userProfile.gmail) ? (
+                <View style={styles.metaRow}>
+                  {userProfile.website ? (
+                    <TouchableOpacity
+                      style={styles.metaItem}
+                      onPress={() => Linking.openURL(userProfile.website!).catch(() => {})}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="globe-outline" size={12} color={colors.accent} />
+                      <Text style={[styles.metaText, { color: colors.accent }]} numberOfLines={1}>
+                        {userProfile.website.replace(/^https?:\/\/(www\.)?/, '')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {userProfile.gmail ? (
+                    <View style={styles.metaItem}>
+                      <Ionicons name="mail-outline" size={12} color={colors.muted} />
+                      <Text style={styles.metaText}>{userProfile.gmail}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {/* Social links */}
+              {userProfile.socialLinks && Object.values(userProfile.socialLinks).some(Boolean) ? (
+                <View style={styles.socialRow}>
+                  {Object.values(userProfile.socialLinks).filter(Boolean).map((link, i) => (
+                    <SocialLinkChip key={i} url={link!} />
+                  ))}
+                </View>
+              ) : null}
 
               {/* Availability badge */}
               <View style={[styles.availBadge, { backgroundColor: availMeta.color }]}>
@@ -342,6 +401,67 @@ export default function ProfileScreen() {
                 <Text style={styles.activitySub}>requests</Text>
               </View>
             </View>
+
+            {/* About section — only shown if user has filled any info */}
+            {(userProfile.bio || userProfile.pronouns || userProfile.location || userProfile.company || userProfile.website || userProfile.gmail || (userProfile.socialLinks && Object.values(userProfile.socialLinks).some(Boolean))) && (
+              <View>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionDot} />
+                  <Text style={styles.sectionLabel}>ABOUT</Text>
+                </View>
+                <View style={styles.cardPad}>
+                  <View style={styles.aboutCard}>
+                    {userProfile.bio ? (
+                      <Text style={[styles.aboutBio, { color: colors.body }]}>{userProfile.bio}</Text>
+                    ) : null}
+
+                    {/* Info rows */}
+                    {[
+                      userProfile.pronouns ? { icon: 'person-outline', text: userProfile.pronouns } : null,
+                      userProfile.location ? { icon: 'location-outline', text: userProfile.location } : null,
+                      userProfile.company  ? { icon: 'business-outline', text: userProfile.company } : null,
+                      memberSince          ? { icon: 'calendar-outline', text: `Member since ${memberSince}` } : null,
+                    ].filter(Boolean).map((item, i) => (
+                      <View key={i} style={styles.aboutRow}>
+                        <Ionicons name={item!.icon as any} size={14} color={colors.muted} />
+                        <Text style={[styles.aboutRowText, { color: colors.body }]}>{item!.text}</Text>
+                      </View>
+                    ))}
+
+                    {/* Website */}
+                    {userProfile.website ? (
+                      <TouchableOpacity
+                        style={styles.aboutRow}
+                        onPress={() => Linking.openURL(userProfile.website!).catch(() => {})}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="globe-outline" size={14} color={colors.accent} />
+                        <Text style={[styles.aboutRowText, { color: colors.accent }]} numberOfLines={1}>
+                          {userProfile.website.replace(/^https?:\/\/(www\.)?/, '')}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {/* Gmail */}
+                    {userProfile.gmail ? (
+                      <View style={styles.aboutRow}>
+                        <Ionicons name="mail-outline" size={14} color={colors.muted} />
+                        <Text style={[styles.aboutRowText, { color: colors.body }]}>{userProfile.gmail}</Text>
+                      </View>
+                    ) : null}
+
+                    {/* Social links */}
+                    {userProfile.socialLinks && Object.values(userProfile.socialLinks).some(Boolean) ? (
+                      <View style={styles.socialList}>
+                        {Object.values(userProfile.socialLinks).filter(Boolean).map((link, i) => (
+                          <SocialLinkChip key={i} url={link!} />
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            )}
 
             {/* Portfolio */}
             {(portfolioItems.length > 0 || portfolioLinks.length > 0) && (
@@ -462,12 +582,22 @@ export default function ProfileScreen() {
         name={name}
         bio={bio}
         location={location}
+        pronouns={pronouns}
+        company={company}
+        gmail={gmail}
+        website={website}
+        socialLinks={socialLinks}
         portfolioItems={portfolioItems}
         portfolioLinks={portfolioLinks}
         availabilityStatus={availabilityStatus}
         onNameChange={setName}
         onBioChange={setBio}
         onLocationChange={setLocation}
+        onPronounsChange={setPronouns}
+        onCompanyChange={setCompany}
+        onGmailChange={setGmail}
+        onWebsiteChange={setWebsite}
+        onSocialLinksChange={setSocialLinks}
         onPickAvatar={handlePickAvatar}
         onPortfolioItemsChange={setPortfolioItems}
         onPortfolioLinksChange={setPortfolioLinks}
@@ -767,6 +897,54 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       fontSize: Theme.fontSize.small,
       color: colors.accent,
       flex: 1,
+    },
+
+    socialRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      justifyContent: 'center',
+    },
+    socialChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.softSurface,
+      borderRadius: Theme.borderRadius.full,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      maxWidth: 160,
+    },
+    aboutCard: {
+      borderRadius: Theme.borderRadius.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: Theme.spacing.md,
+      gap: 2,
+    },
+    aboutBio: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize: Theme.fontSize.small,
+      lineHeight: 20,
+      marginBottom: 8,
+    },
+    aboutRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 5,
+    },
+    aboutRowText: {
+      fontFamily: 'Nunito_400Regular',
+      fontSize: Theme.fontSize.small,
+      flex: 1,
+    },
+    socialList: {
+      marginTop: 4,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      paddingTop: 4,
     },
 
     footer: {

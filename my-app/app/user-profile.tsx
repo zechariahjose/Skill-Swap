@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from './components/Avatar';
 import SkillCard from './components/SkillCard';
+import SocialLinkChip from './components/SocialLinkChip';
 import { Theme } from '../src/constants/Theme';
 import { useAuthContext } from '../src/context/AuthContext';
 import { useTheme } from '../src/context/ThemeContext';
@@ -173,9 +174,50 @@ export default function UserProfileScreen() {
         <SectionHeader label='About' colors={colors} />
         <View style={styles.infoCard}>
           <Text style={styles.infoCardText}>{user.bio?.trim() || 'This user has not written a bio yet.'}</Text>
-          {!!user.location && <View style={styles.metaRow}><Ionicons name='location-outline' size={13} color={colors.muted} /><Text style={styles.metaText}>{user.location}</Text></View>}
+          {!!user.pronouns && (
+            <View style={styles.metaRow}>
+              <Ionicons name="person-outline" size={13} color={colors.muted} />
+              <Text style={styles.metaText}>{user.pronouns}</Text>
+            </View>
+          )}
+          {!!user.location && (
+            <View style={styles.metaRow}>
+              <Ionicons name="location-outline" size={13} color={colors.muted} />
+              <Text style={styles.metaText}>{user.location}</Text>
+            </View>
+          )}
+          {!!user.company && (
+            <View style={styles.metaRow}>
+              <Ionicons name="business-outline" size={13} color={colors.muted} />
+              <Text style={styles.metaText}>{user.company}</Text>
+            </View>
+          )}
           {!!memberSince && <View style={styles.metaRow}><Ionicons name='calendar-outline' size={13} color={colors.muted} /><Text style={styles.metaText}>Member since {memberSince}</Text></View>}
-          {!!user.rating && <View style={styles.metaRow}><Ionicons name='star' size={13} color='#F5C842' /><Text style={styles.metaText}>{user.rating.toFixed(1)} rating</Text></View>}
+          {!!user.rating && (
+            <View style={styles.metaRow}>
+              <Ionicons name="star" size={13} color="#F5C842" />
+              <Text style={styles.metaText}>{user.rating.toFixed(1)} rating</Text>
+            </View>
+          )}
+          {!!user.website && (
+            <TouchableOpacity style={styles.metaRow} onPress={() => Linking.openURL(user.website!).catch(() => {})} activeOpacity={0.7}>
+              <Ionicons name="globe-outline" size={13} color={colors.accent} />
+              <Text style={[styles.metaText, { color: colors.accent }]} numberOfLines={1}>{user.website.replace(/^https?:\/\/(www\.)?/, '')}</Text>
+            </TouchableOpacity>
+          )}
+          {!!user.gmail && (
+            <View style={styles.metaRow}>
+              <Ionicons name="mail-outline" size={13} color={colors.muted} />
+              <Text style={styles.metaText}>{user.gmail}</Text>
+            </View>
+          )}
+          {user.socialLinks && Object.values(user.socialLinks).some(Boolean) && (
+            <View style={styles.socialList}>
+              {Object.values(user.socialLinks).filter(Boolean).map((link, i) => (
+                <SocialLinkChip key={i} url={link!} />
+              ))}
+            </View>
+          )}
         </View>
       </View>
       {(portfolioItems.length > 0 || portfolioLinks.length > 0) && (
@@ -263,4 +305,5 @@ const getStyles = (colors: any) => StyleSheet.create({
   portfolioLinkText: { fontFamily: 'Nunito_600SemiBold', fontSize: 11, color: colors.muted },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   linkText: { fontFamily: 'Nunito_700Bold', fontSize: Theme.fontSize.small, color: colors.accent, flex: 1 },
+  socialList: { marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 4 },
 });

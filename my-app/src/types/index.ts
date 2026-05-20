@@ -29,8 +29,18 @@ export interface User {
   availabilityStatus?: AvailabilityStatus;
   rating?: number;
   totalSwaps?: number;
-  skillsOffered?: string[]; // skill IDs
-  skillsWanted?: string[]; // skill IDs
+  pronouns?: string;
+  company?: string;
+  gmail?: string;
+  website?: string;
+  socialLinks?: {
+    slot1?: string;
+    slot2?: string;
+    slot3?: string;
+    slot4?: string;
+  };
+  skillsOffered?: string[];
+  skillsWanted?: string[];
   portfolioItems?: PortfolioItem[];
   portfolioLinks?: PortfolioLink[];
 }
