@@ -360,7 +360,7 @@ export default function ProfileDrawer({
                         borderColor: isActive ? colors.accent : colors.border,
                       }]}>
                       <Text style={[styles.typeBtnText, { color: isActive ? colors.accent : colors.muted }]}>
-                        {mode === 'light' ? 'â˜€ï¸  Light' : 'ðŸŒ™  Dark'}
+                        {mode === 'light' ? 'Light' : 'Dark'}
                       </Text>
                     </TouchableOpacity>
                   );
