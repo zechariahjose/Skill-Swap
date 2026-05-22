@@ -1,8 +1,9 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==============================
 // Firebase Config (.env values)
@@ -42,7 +43,7 @@ if (isFirebaseConfigured) {
 }
 
 // ==============================
-// Initialize Auth (Expo-safe)
+// Initialize Auth with AsyncStorage persistence
 // ==============================
 
 let _auth: Auth | null = null;
@@ -57,7 +58,14 @@ function initAuth() {
     return;
   }
 
-  _auth = getAuth(app);
+  try {
+    _auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    // Already initialized — get existing instance
+    _auth = getAuth(app);
+  }
 }
 
 export const getAuthInstance = (): Auth | null => {
