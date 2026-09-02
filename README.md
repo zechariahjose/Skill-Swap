@@ -22,7 +22,7 @@ Whether it’s tutoring, graphic design, coding, music lessons, or language prac
   Toggle between themes for a personalized user experience.
 - **Cross-Platform Support**  
   Runs smoothly on both Android and iOS using Expo.
-- **Admin Panel (Development Only)**  
+- **Admin Panel**  
   Includes development tools for managing users and content.
 
 ---
