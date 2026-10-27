@@ -15,6 +15,7 @@ import {
 import { register } from '../../src/firebase/auth';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -94,6 +95,11 @@ export default function RegisterScreen() {
               {submitting ? 'Creating account…' : 'Join the community'}
             </Text>
           </TouchableOpacity>
+
+          <GoogleSignInButton
+            disabled={submitting}
+            onSignedIn={() => router.replace('/(tabs)/home')}
+          />
 
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity style={styles.linkBtn} activeOpacity={0.8}>

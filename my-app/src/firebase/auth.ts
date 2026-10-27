@@ -7,6 +7,8 @@ import {
   updateEmail,
   updatePassword,
   deleteUser,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuthInstance, db, isFirebaseConfigured } from './config';
@@ -145,6 +147,41 @@ export async function login(email: string, password: string): Promise<FirebaseUs
 
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+/** Sign in with a Google ID token and create a profile for first-time users. */
+export async function signInWithGoogle(idToken: string): Promise<FirebaseUser> {
+  const auth = getAuthInstance();
+  if (!isFirebaseConfigured || !auth || !db) {
+    throw new Error('Google sign-in requires Firebase to be configured.');
+  }
+
+  const credential = GoogleAuthProvider.credential(idToken);
+  const { user } = await signInWithCredential(auth, credential);
+  const profileRef = doc(db, 'users', user.uid);
+  const profileSnapshot = await getDoc(profileRef);
+
+  if (!profileSnapshot.exists()) {
+    const name = user.displayName?.trim() || user.email?.split('@')[0] || 'Skill Swap member';
+    const initials = name
+      .split(' ')
+      .map((word) => word[0] ?? '')
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+    await setDoc(profileRef, {
+      uid: user.uid,
+      name,
+      initials,
+      bio: '',
+      location: '',
+      avatar: user.photoURL,
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  return user;
 }
 
 /** Sign out */

@@ -15,6 +15,7 @@ import { login } from '../../src/firebase/auth';
 import { isAdminUser } from '../../src/firebase/firestore';
 import { useTheme } from '../../src/context/ThemeContext';
 import { Theme } from '../../src/constants/Theme';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -85,6 +86,14 @@ export default function LoginScreen() {
               {submitting ? 'Signing in…' : 'Sign in'}
             </Text>
           </TouchableOpacity>
+
+          <GoogleSignInButton
+            disabled={submitting}
+            onSignedIn={async (user) => {
+              const admin = await isAdminUser(user.uid);
+              router.replace(admin ? '/admin' : '/(tabs)/home');
+            }}
+          />
 
           <Link href="/(auth)/register" asChild>
             <TouchableOpacity style={styles.linkBtn} activeOpacity={0.8}>
