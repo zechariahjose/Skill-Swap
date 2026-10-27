@@ -1,4 +1,5 @@
 ﻿import { Redirect, Tabs } from 'expo-router';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -17,19 +18,6 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type TabRoute = {
-  key: string;
-  name: string;
-};
-
-type FloatingTabBarProps = {
-  state: { routes: TabRoute[]; index: number };
-  navigation: {
-    emit: (event: { type: string; target: string; canPreventDefault: boolean }) => { defaultPrevented: boolean };
-    navigate: (name: string) => void;
-  };
-};
 
 function getIcon(routeName: string, focused: boolean): keyof typeof Ionicons.glyphMap {
   const map: Record<string, [string, string]> = {
@@ -185,7 +173,7 @@ function darken(hex: string, amount: number): string {
 
 // ─── Floating Tab Bar ─────────────────────────────────────────────────────────
 
-function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
+function FloatingTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, themeMode } = useTheme();
 
@@ -231,13 +219,13 @@ function FloatingTabBar({ state, navigation }: FloatingTabBarProps) {
           const isCreate  = route.name === 'create';
 
           const onPress = () => {
-            const event = navigation.emit({
+            const event = emitter.emit({
               type: 'tabPress',
               target: route.key,
               canPreventDefault: true,
             });
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigateToTab(route.key);
             }
           };
 
@@ -281,7 +269,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...(props as unknown as FloatingTabBarProps)} />}
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="home"        />
