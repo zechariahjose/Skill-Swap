@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     borderRadius: BAR_RADIUS,
   },
   borderOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: BAR_RADIUS,
     borderWidth:  1,
   },

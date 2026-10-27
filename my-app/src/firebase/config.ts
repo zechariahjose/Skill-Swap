@@ -1,7 +1,10 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth } from 'firebase/auth';
+// Firebase exposes this helper only in its React Native runtime entry, not its shared TypeScript declarations.
+// @ts-expect-error React Native-only Firebase Auth export
+import { getReactNativePersistence } from 'firebase/auth';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

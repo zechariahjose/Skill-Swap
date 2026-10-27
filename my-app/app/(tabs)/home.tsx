@@ -276,7 +276,7 @@ export default function HomeScreen() {
                 subtitle="Try another category, or be the first to post a skill."
               />
             </View>
-          ) : null
+          ) : undefined
         }
       />
     </View>

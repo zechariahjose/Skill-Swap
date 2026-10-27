@@ -377,7 +377,7 @@ export default function ProfileDrawer({
 
 const styles = StyleSheet.create({
   drawerLayer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'flex-end' },
-  drawerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.52)' },
+  drawerOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.52)' },
   drawer: {
     width: '86%', height: '100%', paddingTop: 60, paddingHorizontal: Theme.spacing.lg,
     borderLeftWidth: 1, shadowColor: '#000', shadowOffset: { width: -8, height: 0 },
