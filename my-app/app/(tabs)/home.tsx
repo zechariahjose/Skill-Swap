@@ -163,11 +163,11 @@ export default function HomeScreen() {
                       : 'Explore skills from your community'}
                   </Text>
                   <TouchableOpacity
-                    disabled
+                    onPress={() => router.push('/(tabs)/map')}
                     accessibilityRole="button"
-                    accessibilityLabel="Map view, unavailable"
-                    accessibilityState={{ disabled: true }}
+                    accessibilityLabel="Open map view"
                     style={[styles.mapViewButton, { backgroundColor: colors.softSurface ?? colors.surface }]}
+                    activeOpacity={0.7}
                   >
                     <Ionicons name="map" size={12} color={colors.accent} />
                     <Text style={[styles.mapViewText, { color: colors.ink }]}>Map view</Text>
