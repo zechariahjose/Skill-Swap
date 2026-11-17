@@ -13,21 +13,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from '../components/Avatar';
+import GoogleMapCanvas from '../components/GoogleMapCanvas';
 import { Theme } from '../../src/constants/Theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { createSwapRequest, getSkillsByUser } from '../../src/firebase/firestore';
 import { useSkills } from '../../src/hooks/useSkills';
 import { CATEGORIES, Category, Skill } from '../../src/types';
-
-const MARKER_POSITIONS = [
-  { left: '24%', top: '21%' },
-  { left: '68%', top: '30%' },
-  { left: '43%', top: '49%' },
-  { left: '77%', top: '58%' },
-  { left: '18%', top: '66%' },
-  { left: '54%', top: '76%' },
-];
 
 export default function MapScreen() {
   const { skills } = useSkills();
@@ -49,8 +41,7 @@ export default function MapScreen() {
     });
   }, [search, selectedCategory, skills, userProfile?.uid]);
 
-  const selectedSkill =
-    filteredSkills.find((skill) => skill.id === selectedSkillId) ?? filteredSkills[0] ?? null;
+  const selectedSkill = filteredSkills.find((skill) => skill.id === selectedSkillId) ?? null;
 
   const selectCategory = (category: Category | 'All') => {
     setSelectedCategory(category);
@@ -87,7 +78,7 @@ export default function MapScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: '#EEECE6' }]}>
-      <MapIllustration />
+      <GoogleMapCanvas />
 
       <View style={[styles.content, { paddingTop: insets.top + 10 }]}>
         <View style={styles.topRow}>
@@ -105,8 +96,7 @@ export default function MapScreen() {
             <Text style={styles.nearbyText}>SKILL EXPLORER</Text>
           </View>
           <View style={styles.radiusPill}>
-            <Text style={styles.radiusText}>Map preview</Text>
-            <Ionicons name="chevron-down" size={12} color={colors.muted} />
+            <Text style={styles.radiusText}>Google Maps</Text>
           </View>
         </View>
 
@@ -159,45 +149,6 @@ export default function MapScreen() {
             );
           }}
         />
-      </View>
-
-      <View style={styles.markerLayer} pointerEvents="box-none">
-        {filteredSkills.slice(0, MARKER_POSITIONS.length).map((skill, index) => {
-          const category = CATEGORIES.find((entry) => entry.label === skill.category);
-          const active = skill.id === selectedSkill?.id;
-          return (
-            <TouchableOpacity
-              key={skill.id}
-              onPress={() => setSelectedSkillId(skill.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`${skill.title} by ${skill.userName}`}
-              accessibilityState={{ selected: active }}
-              style={[
-                styles.marker,
-                MARKER_POSITIONS[index],
-                active && styles.markerActive,
-              ]}
-              activeOpacity={0.85}
-            >
-              {active ? (
-                <>
-                  <Avatar initials={skill.userInitials} size={30} />
-                  <View>
-                    <Text numberOfLines={1} style={styles.markerTitle}>
-                      {skill.title}
-                    </Text>
-                    <Text style={styles.markerSubtitle}>{skill.category}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.markerEmoji}>{category?.emoji ?? '✦'}</Text>
-                  <Text numberOfLines={1} style={styles.markerLabel}>{skill.title}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          );
-        })}
       </View>
 
       <View style={[styles.mapTools, { top: insets.top + 250 }]}>
@@ -256,11 +207,7 @@ export default function MapScreen() {
                   {selectedSkill.type === 'offer' ? 'Offering' : 'Looking for'}
                 </Text>
               </View>
-              <Text style={styles.locationText}>Community skill</Text>
-            </View>
-            <View style={styles.availability}>
-              <View style={styles.availabilityDot} />
-              <Text style={styles.availabilityText}>Open to swap</Text>
+              <Text style={styles.locationText}>Location unavailable</Text>
             </View>
           </View>
           <Text style={styles.skillTitle} numberOfLines={1}>{selectedSkill.title}</Text>
@@ -284,116 +231,15 @@ export default function MapScreen() {
         </View>
       ) : (
         <View style={[styles.emptyPanel, { bottom: insets.bottom + 104 }]}>
-          <Text style={styles.emptyTitle}>No skills to show</Text>
-          <Text style={styles.emptyText}>Try a different search or category.</Text>
+          <Text style={styles.emptyTitle}>Explore the map</Text>
+          <Text style={styles.emptyText}>
+            Skill locations will appear here when members choose to share them.
+          </Text>
         </View>
       )}
     </View>
   );
 }
-
-function MapIllustration() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={illustrationStyles.parkOne} />
-      <View style={illustrationStyles.parkTwo} />
-      <View style={illustrationStyles.water} />
-      <View style={illustrationStyles.roadVertical} />
-      <View style={illustrationStyles.roadDiagonal} />
-      <View style={illustrationStyles.roadCross} />
-      <View style={illustrationStyles.roadHorizontal} />
-      <View style={illustrationStyles.roadThinOne} />
-      <View style={illustrationStyles.roadThinTwo} />
-    </View>
-  );
-}
-
-const illustrationStyles = StyleSheet.create({
-  parkOne: {
-    position: 'absolute',
-    left: '-24%',
-    top: '28%',
-    width: '52%',
-    height: '25%',
-    borderRadius: 150,
-    backgroundColor: '#E1E5D9',
-    transform: [{ rotate: '-18deg' }],
-  },
-  parkTwo: {
-    position: 'absolute',
-    right: '-20%',
-    top: '72%',
-    width: '56%',
-    height: '22%',
-    borderRadius: 150,
-    backgroundColor: '#E2E6DC',
-    transform: [{ rotate: '14deg' }],
-  },
-  water: {
-    position: 'absolute',
-    left: '-15%',
-    bottom: '6%',
-    width: '130%',
-    height: '14%',
-    borderRadius: 140,
-    backgroundColor: '#DCE5E7',
-    transform: [{ rotate: '7deg' }],
-  },
-  roadVertical: {
-    position: 'absolute',
-    left: '49%',
-    top: '-8%',
-    height: '120%',
-    width: 18,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    transform: [{ rotate: '-3deg' }],
-  },
-  roadDiagonal: {
-    position: 'absolute',
-    left: '43%',
-    top: '-12%',
-    height: '130%',
-    width: 13,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    transform: [{ rotate: '33deg' }],
-  },
-  roadCross: {
-    position: 'absolute',
-    left: '-28%',
-    top: '48%',
-    height: 15,
-    width: '150%',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    transform: [{ rotate: '-12deg' }],
-  },
-  roadHorizontal: {
-    position: 'absolute',
-    left: '-18%',
-    top: '68%',
-    height: 13,
-    width: '140%',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    transform: [{ rotate: '39deg' }],
-  },
-  roadThinOne: {
-    position: 'absolute',
-    left: '16%',
-    top: '18%',
-    height: '88%',
-    width: 9,
-    backgroundColor: 'rgba(255,255,255,0.38)',
-    transform: [{ rotate: '-2deg' }],
-  },
-  roadThinTwo: {
-    position: 'absolute',
-    right: '16%',
-    top: '20%',
-    height: '92%',
-    width: 9,
-    backgroundColor: 'rgba(255,255,255,0.42)',
-    transform: [{ rotate: '-1deg' }],
-  },
-});
 
 const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =>
   StyleSheet.create({
@@ -508,55 +354,6 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       fontSize: 13,
     },
     chipTextActive: { color: '#FFFFFF' },
-    markerLayer: {
-      ...StyleSheet.absoluteFill,
-      top: '28%',
-      bottom: '28%',
-      zIndex: 1,
-    },
-    marker: {
-      position: 'absolute',
-      maxWidth: '60%',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: Theme.borderRadius.full,
-      backgroundColor: 'rgba(255,255,255,0.96)',
-      borderWidth: 1,
-      borderColor: 'rgba(20,19,18,0.08)',
-      shadowColor: '#352F27',
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.14,
-      shadowRadius: 9,
-      elevation: 5,
-    },
-    markerActive: {
-      maxWidth: '72%',
-      paddingHorizontal: 9,
-      backgroundColor: colors.ink,
-      borderColor: '#FFFFFF',
-      borderWidth: 2,
-    },
-    markerEmoji: { fontSize: 15 },
-    markerLabel: {
-      flexShrink: 1,
-      color: colors.ink,
-      fontFamily: 'Nunito_600SemiBold',
-      fontSize: 12,
-    },
-    markerTitle: {
-      maxWidth: 150,
-      color: '#FFFFFF',
-      fontFamily: 'Nunito_700Bold',
-      fontSize: 12,
-    },
-    markerSubtitle: {
-      color: 'rgba(255,255,255,0.72)',
-      fontFamily: 'Nunito_400Regular',
-      fontSize: 10,
-    },
     mapTools: {
       position: 'absolute',
       right: 18,
@@ -625,22 +422,6 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       color: colors.muted,
       fontFamily: 'Nunito_400Regular',
       fontSize: 12,
-    },
-    availability: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    availabilityDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-      backgroundColor: '#16B981',
-    },
-    availabilityText: {
-      color: '#07835C',
-      fontFamily: 'Nunito_600SemiBold',
-      fontSize: 10,
     },
     skillTitle: {
       color: colors.ink,
