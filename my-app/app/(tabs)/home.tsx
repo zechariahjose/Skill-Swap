@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CategoryChip from '../components/CategoryChip';
 import EmptyState from '../components/EmptyState';
@@ -39,7 +38,6 @@ export default function HomeScreen() {
   const { userProfile }                    = useAuthContext();
   const { colors }                         = useTheme();
   const { count: unreadCount }             = useNotificationCount();
-  const insets                             = useSafeAreaInsets();
   const [search, setSearch]                = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [refreshing, setRefreshing]        = useState(false);
@@ -165,11 +163,11 @@ export default function HomeScreen() {
                       : 'Explore skills from your community'}
                   </Text>
                   <TouchableOpacity
-                    disabled
+                    onPress={() => router.push('/(tabs)/map')}
                     accessibilityRole="button"
-                    accessibilityLabel="Map view, unavailable"
-                    accessibilityState={{ disabled: true }}
+                    accessibilityLabel="Open map view"
                     style={[styles.mapViewButton, { backgroundColor: colors.softSurface ?? colors.surface }]}
+                    activeOpacity={0.7}
                   >
                     <Ionicons name="map" size={12} color={colors.accent} />
                     <Text style={[styles.mapViewText, { color: colors.ink }]}>Map view</Text>
@@ -297,16 +295,6 @@ export default function HomeScreen() {
           ) : undefined
         }
       />
-      <TouchableOpacity
-        disabled
-        accessibilityRole="button"
-        accessibilityLabel="Explore Map, unavailable"
-        accessibilityState={{ disabled: true }}
-        style={[styles.exploreMapButton, { bottom: insets.bottom + 96 }]}
-      >
-        <Ionicons name="map-outline" size={17} color="#FFFFFF" />
-        <Text style={styles.exploreMapText}>Explore Map</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -361,7 +349,7 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
     },
 
     listContent: {
-      paddingBottom: 160,
+      paddingBottom: 100,
     },
 
     header: {
@@ -430,6 +418,7 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
       alignItems:    'center',
       gap:           8,
       marginTop:     10,
+      marginRight:   -52,
     },
 
     mapViewButton: {
@@ -446,30 +435,6 @@ const getStyles = (colors: typeof import('../../src/constants/Colors').Colors) =
     mapViewText: {
       fontFamily: 'Nunito_600SemiBold',
       fontSize:   10,
-    },
-
-    exploreMapButton: {
-      position:        'absolute',
-      right:           24,
-      flexDirection:   'row',
-      alignItems:      'center',
-      justifyContent:  'center',
-      gap:             8,
-      backgroundColor: '#171615',
-      borderRadius:    Theme.borderRadius.full,
-      paddingHorizontal: 18,
-      paddingVertical:  12,
-      shadowColor:      '#000',
-      shadowOffset:     { width: 0, height: 4 },
-      shadowOpacity:    0.2,
-      shadowRadius:     10,
-      elevation:        8,
-    },
-
-    exploreMapText: {
-      color:      '#FFFFFF',
-      fontFamily: 'Nunito_700Bold',
-      fontSize:   13,
     },
 
     // ── Notification button ───────────────────────────────────────────────

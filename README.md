@@ -85,6 +85,27 @@ Google sign-in uses Expo AuthSession to obtain a Google ID token, then exchanges
 
 > **Expo Go limitation:** Google OAuth redirects for this app require the app's custom URL scheme. Expo Go does not support this OAuth flow. Use a development build on your iPhone or Android device; changing `app.json`, app identifiers, or OAuth settings also requires rebuilding the development app.
 
+## Google Maps Setup
+
+The map uses `react-native-maps` with Google Maps on Android and iOS, and the Google Maps JavaScript API on web. It currently shows an interactive map without location permission or skill pins; skill records do not yet include coordinates.
+
+1. In Google Cloud Console, enable **Maps SDK for Android**, **Maps SDK for iOS**, and **Maps JavaScript API**.
+2. Create separate API keys and restrict them:
+   - Android key: Android app restriction for `com.skillswap.app` and the SHA-1 fingerprints for each signing certificate.
+   - iOS key: iOS app restriction for bundle ID `com.skillswap.app`.
+   - Web key: HTTP referrer restriction to the development and production website origins.
+3. Add the keys to local `.env` for development:
+
+   ```env
+   GOOGLE_MAPS_ANDROID_API_KEY=your-restricted-android-key
+   GOOGLE_MAPS_IOS_API_KEY=your-restricted-ios-key
+   EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY=your-restricted-web-key
+   ```
+
+   The web key is necessarily included in the browser bundle; secure it with HTTP referrer and API restrictions. Native keys are also present in app binaries, so restrict them to their app identifiers.
+4. For EAS builds, configure the same variable names in the EAS environment used by the build. The `EXPO_PUBLIC_` web key is public at runtime; do not use a server-side key.
+5. Restart Expo for web. For Android and iOS, create and install a new development or production build after setting the keys; native map configuration is compiled into the app.
+
 ## Run the App
 
 Start the Metro development server:
@@ -107,5 +128,4 @@ For web:
 ```bash
 npm run web
 ```
-
 

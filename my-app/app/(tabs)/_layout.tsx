@@ -215,7 +215,10 @@ function FloatingTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
       <View style={styles.inner}>
         {visibleRoutes.map((route) => {
           const realIndex = state.routes.findIndex(r => r.key === route.key);
-          const isFocused = state.index === realIndex;
+          const routeIsFocused = state.index === realIndex;
+          const isFocused =
+            routeIsFocused ||
+            (route.name === 'home' && state.routes[state.index]?.name === 'map');
           const isCreate  = route.name === 'create';
 
           const onPress = () => {
@@ -224,7 +227,7 @@ function FloatingTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !event.defaultPrevented) {
+            if (!routeIsFocused && !event.defaultPrevented) {
               navigateToTab(route.key);
             }
           };
@@ -277,6 +280,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="connections" />
       <Tabs.Screen name="create"      />
       <Tabs.Screen name="profile"     />
+      <Tabs.Screen name="map" />
     </Tabs>
   );
 }
